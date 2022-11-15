@@ -1,5 +1,7 @@
 const navbar = require('./navbar.jsx');
 
+
+
 const init = async () => {
     const response = await fetch('/getToken');
     const data = await response.json();
@@ -15,4 +17,6 @@ const init = async () => {
     navbar.initializeNavbar(passFunctions, data.csrfToken);
 };
 
-window.onload = init;
+module.exports = {
+    init,
+}

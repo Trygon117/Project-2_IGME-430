@@ -91,7 +91,6 @@ const LoginWindow = (props) => {
 const renderLoginWindow = async (props) => {
     ReactDOM.render(<LoginWindow csrf={props.csrf} />,
         document.getElementById('login-content'));
-
 };
 
 const SignupWindow = (props) => {
@@ -182,22 +181,10 @@ const init = async () => {
     ReactDOM.render(<LoginWindow csrf={data.csrfToken} />,
         document.getElementById('login-content')
     );
-
-    ReactDOM.render(
-        <navbar.Navbar csrf={data.csrfToken} />,
-        document.getElementById('navbar')
-    );
-
-    const passFunctions = {
-        renderLoginWindow,
-        renderSignUpWindow,
-    }
-    navbar.initializeNavbar(passFunctions, data.csrfToken);
 };
 
-window.onload = init;
-
 module.exports = {
-    LoginWindow,
-    SignupWindow,
+    init,
+    renderLoginWindow,
+    renderSignUpWindow,
 }

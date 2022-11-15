@@ -15,4 +15,6 @@ const init = async () => {
     navbar.initializeNavbar(passFunctions, data.csrfToken);
 };
 
-window.onload = init;
+module.exports = {
+    init,
+}

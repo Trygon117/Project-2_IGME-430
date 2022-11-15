@@ -1,11 +1,6 @@
 // Navbar for every page
 const Navbar = (props) => {
-    updateSelectedPage = (e) => {
-        Array.from(e.currentTarget.parentElement.children).forEach(tab => tab.classList = 'navbar-item is-tab');
-        e.currentTarget.classList = 'navbar-item is-tab is-active';
-    };
-
-    clickBurger = (e) => {
+    const clickBurger = (e) => {
         e.preventDefault();
         try {
             let navbarMenue = e.currentTarget.parentElement.parentElement.querySelector("#nav-links");
@@ -31,8 +26,9 @@ const Navbar = (props) => {
             <div className="navbar-menu" id="nav-links">
                 <div className="navbar-start">
                     <a id="home" className="navbar-item is-tab" href='/home'>Home</a>
-                    <a id="Write" className="navbar-item is-tab" href='/home'>Create</a>
-                    <a id="Library" className="navbar-item is-tab" href='/home'>Library</a>
+                    <a id="create" className="navbar-item is-tab" href='/create'>Create</a>
+                    <a id="library" className="navbar-item is-tab" href='/library'>Library</a>
+                    <a id="profile" className="navbar-item is-tab" href='/profile'>Profile</a>
                 </div>
                 <div className="navbar-end">
                     <a id="login" className="navbar-item is-tab" onClick={updateSelectedPage}>Login</a>
@@ -44,11 +40,7 @@ const Navbar = (props) => {
     );
 };
 
-// Initialize Navbar State
-const initializeNavbar = async (passedFunctions, _csrf) => {
-    let response = await fetch('/isLoggedIn');
-    let data = await response.json();
-
+const updateSelectedPage = () => {
     const currentPage = document.querySelector('header').getAttribute('data-current-page');
 
     const navbarItems = Array.from(document.querySelector('.navbar-start').children)
@@ -56,12 +48,39 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
 
     // update each navbar item so it shows what page we are on
     navbarItems.forEach(navItem => {
+        console.log(navItem);
         if (navItem.id === currentPage) {
-            navItem.classList = 'navbar-item is-tab is-active';
+            // login page means we need to do some extra logic to swap between login / sign up
+            if (currentPage === 'login') {
+                const loginButton = document.querySelector('#login');
+                const signUpButton = document.querySelector('#signup');
+                if (document.querySelector('#loginForm')) {
+                    loginButton.classList = 'navbar-item is-tab is-active';
+                    signUpButton.classList = 'navbar-item is-tab';
+                } else {
+                    loginButton.classList = 'navbar-item is-tab';
+                    signUpButton.classList = 'navbar-item is-tab is-active';
+                    console.log(signUpButton.classList.value);
+                }
+            } else {
+                navItem.classList = 'navbar-item is-tab is-active';
+            }
         } else {
-            navItem.classList = 'navbar-item is-tab';
+            if (navItem.id === 'signup') {
+                // this made me angry >:(
+            } else {
+                navItem.classList = 'navbar-item is-tab';
+            }
         }
     });
+};
+
+// Initialize Navbar State
+const initializeNavbar = async (passedFunctions, _csrf) => {
+    let response = await fetch('/isLoggedIn');
+    let data = await response.json();
+
+    updateSelectedPage();
 
     let signOutButton = document.getElementById('signout');
     let signUpButton = document.getElementById('signup');
@@ -97,7 +116,9 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
                 await passedFunctions.renderLoginWindow({ _csrf });
                 return false;
             } else {
-                await fetch('/login');
+                let loginResponse = await fetch('/login');
+                window.localStorage.setItem('partchment-LoadSignUp', false);
+                window.location.assign(loginResponse.url);
                 return false;
             }
         });
@@ -109,8 +130,9 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
                 await passedFunctions.renderSignUpWindow({ _csrf });
                 return false;
             } else {
-                await fetch('/login');
-                await passedFunctions.renderSignUpWindow({ _csrf });
+                let loginResponse = await fetch('/login');
+                window.localStorage.setItem('partchment-LoadSignUp', true);
+                window.location.assign(loginResponse.url);
                 return false;
             }
         });
@@ -120,4 +142,5 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
 module.exports = {
     Navbar,
     initializeNavbar,
+    updateSelectedPage,
 }
