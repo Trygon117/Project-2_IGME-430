@@ -9,7 +9,7 @@
   "main": "./server/app.js",
   "scripts": {
     "webpack": "webpack",
-    "webpackWatch": "webpack watch",
+    "watchWebpack": "webpack watch",
     "nodemon": "nodemon -e js,html,css --watch ./server --watch ./hosted ./server/app.js",
     "start": "node ./server/app.js",
     "pretest": "eslint ./server --fix",

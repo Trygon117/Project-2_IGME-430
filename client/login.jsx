@@ -1,4 +1,5 @@
 const helper = require('./helper.js');
+const navbar = require('./navbar.jsx');
 
 const handleLogin = (e) => {
     e.preventDefault();
@@ -87,6 +88,12 @@ const LoginWindow = (props) => {
     );
 };
 
+const renderLoginWindow = async (props) => {
+    ReactDOM.render(<LoginWindow csrf={props.csrf} />,
+        document.getElementById('login-content'));
+
+};
+
 const SignupWindow = (props) => {
     authenticateUsername = async (e) => {
         const input = e.currentTarget;
@@ -163,83 +170,34 @@ const SignupWindow = (props) => {
     );
 };
 
-const Navbar = (props) => {
-
-    loginButton = (e) => {
-        e.preventDefault();
-        setPageWeight(e);
-        ReactDOM.render(<LoginWindow csrf={props.csrf} />,
-            document.getElementById('login-content'));
-        return false;
-    };
-
-    signupButton = (e) => {
-        e.preventDefault();
-        setPageWeight(e);
-        ReactDOM.render(<SignupWindow csrf={props.csrf} />,
-            document.getElementById('login-content'));
-        return false;
-    };
-
-    setPageWeight = (e) => {
-        let signupButton = e.currentTarget.parentElement.querySelector('#signup');
-        signupButton.classList.toggle('is-active');
-        signupButton.classList.toggle('has-text-weight-bold');
-
-        let loginButton = e.currentTarget.parentElement.querySelector('#login');
-        loginButton.classList.toggle('is-active');
-        loginButton.classList.toggle('has-text-weight-bold');
-    }
-
-    clickBurger = (e) => {
-        e.preventDefault();
-        try {
-            let navbarMenue = e.currentTarget.parentElement.parentElement.querySelector("#nav-links");
-            e.currentTarget.classList.toggle('is-active');
-            navbarMenue.classList.toggle('is-active');
-        } catch (err) {
-            console.log(err);
-        }
-    }
-
-    return (
-        <nav className="navbar is-white has-shadow">
-            <div className="navbar-brand">
-                <a className="navbar-item" href="/">
-                    <i className="fa-solid fa-scroll"></i>
-                </a>
-                <a className="navbar-burger" id="burger" onClick={clickBurger}>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-            </div>
-            <div className="navbar-menu" id="nav-links">
-                <div className="navbar-start">
-                    <a id="home" className="navbar-item" href='/home'>Home</a>
-                    <a id="Write" className="navbar-item" href='/home'>Create</a>
-                    <a id="Library" className="navbar-item" href='/home'>Library</a>
-                </div>
-                <div className="navbar-end">
-                    <a id="login" className="navbar-item is-active has-text-weight-bold" onClick={loginButton}>Login</a>
-                    <a id="signup" className="navbar-item" onClick={signupButton}>Sign Up</a>
-                </div>
-            </div>
-        </nav>
-    );
+const renderSignUpWindow = async (props) => {
+    ReactDOM.render(<SignupWindow csrf={props.csrf} />,
+        document.getElementById('login-content'));
 };
 
 const init = async () => {
     const response = await fetch('/getToken');
     const data = await response.json();
 
+    ReactDOM.render(<LoginWindow csrf={data.csrfToken} />,
+        document.getElementById('login-content')
+    );
+
     ReactDOM.render(
-        <Navbar csrf={data.csrfToken} />,
+        <navbar.Navbar csrf={data.csrfToken} />,
         document.getElementById('navbar')
     );
 
-    ReactDOM.render(<LoginWindow csrf={data.csrfToken} />,
-        document.getElementById('login-content'));
+    const passFunctions = {
+        renderLoginWindow,
+        renderSignUpWindow,
+    }
+    navbar.initializeNavbar(passFunctions, data.csrfToken);
 };
 
 window.onload = init;
+
+module.exports = {
+    LoginWindow,
+    SignupWindow,
+}
