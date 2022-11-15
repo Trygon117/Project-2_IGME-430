@@ -1,0 +1,25 @@
+#login-content {
+    padding-top: 200px;
+}
+
+#loginform {
+    width: 500px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+}
+
+#signupform {
+    width: 500px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+}
+
+#login-error-span {
+    position: absolute;
+    float: left;
+}
+
+#signup-error-span {
+    position: absolute;
+    float: left;
+}
