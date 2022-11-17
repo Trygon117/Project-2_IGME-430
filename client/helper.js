@@ -12,8 +12,28 @@ const sendPost = async (url, data, handler) => {
 
     const result = await response.json();
 
+    handleResponse(result, data, handler);
+};
+
+const sendMultipartPost = async (url, FData, handler) => {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+        body: FData
+    });
+
+    const result = await response.json();
+
+
+    handleResponse(result, data, handler);
+}
+
+const handleResponse = (result, data, handler) => {
     if (result.error) {
-        handleError(result.error);
+        console.log(result.error);
+        return;
     }
 
     if (result.redirect) {
@@ -24,8 +44,9 @@ const sendPost = async (url, data, handler) => {
         result.csrfToken = data._csrf;
         handler(result);
     }
-};
+}
 
 module.exports = {
     sendPost,
+    sendMultipartPost,
 }

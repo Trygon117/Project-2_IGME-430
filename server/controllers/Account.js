@@ -59,21 +59,19 @@ const signup = async (req, res) => {
 };
 
 const isUsernameAvailable = async (req, res) => {
-  let user = await Account.findOne({ username: req.body.username });
+  const user = await Account.findOne({ username: req.body.username });
   if (user) {
     return res.status(200).json({ found: true });
-  } else {
-    return res.status(200).json({ found: false });
   }
+  return res.status(200).json({ found: false });
 };
 
 const isLoggedIn = (req, res) => {
-  let logged = req.session.account;
+  const logged = req.session.account;
   if (logged) {
     return res.status(200).json({ loggedIn: true });
-  } else {
-    return res.status(200).json({ loggedIn: false });
   }
+  return res.status(200).json({ loggedIn: false });
 };
 
 const getToken = (req, res) => res.json({ csrfToken: req.csrfToken() });

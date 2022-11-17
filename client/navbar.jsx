@@ -48,7 +48,6 @@ const updateSelectedPage = () => {
 
     // update each navbar item so it shows what page we are on
     navbarItems.forEach(navItem => {
-        console.log(navItem);
         if (navItem.id === currentPage) {
             // login page means we need to do some extra logic to swap between login / sign up
             if (currentPage === 'login') {
@@ -87,18 +86,19 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
     let loginButton = document.getElementById('login');
 
     // if the user is currently logged in
-    if (data.LoggedIn) {
+    if (data.loggedIn) {
         // hide the log in and sign up buttons, and show the Log Out button
         signOutButton.style.display = 'flex';
         signUpButton.style.display = 'none';
         loginButton.style.display = 'none';
 
         // log the user out
-        signoutButton = async (e) => {
+        signOutButton.addEventListener('click', async (e) => {
             e.preventDefault();
-            setPageWeight(e);
-            await fetch('/logout');
-        };
+            let logoutResponse = await fetch('/logout');
+            window.localStorage.setItem('partchment-LoadSignUp', false);
+            window.location.assign(logoutResponse.url);
+        });
     } else {
         // hide the log out button, and show the log in and sign up buttons
         signOutButton.style.display = 'none';

@@ -14,6 +14,10 @@
     padding-bottom: 50px;
 }
 
+#createNovelForm {
+    padding-bottom: 50px;
+}
+
 #login-error-span {
     position: absolute;
     float: left;

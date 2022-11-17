@@ -23,6 +23,24 @@ const router = (app) => {
 
   app.get('/profile', mid.requiresSecure, mid.requiresLogin, controllers.Pages.profilePage);
 
+  // Novels
+  app.post('/createNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.createNovel);
+
+  app.post('/deleteNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.deleteNovel);
+
+  app.post('/editNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.editNovel);
+
+  app.post('/publishNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.publishNovel);
+
+  // Chapters
+  app.post('/createChapter', mid.requiresLogin, mid.requiresSecure, controllers.Novels.createChapter);
+
+  app.post('/deleteChapter', mid.requiresLogin, mid.requiresSecure, controllers.Novels.deleteChapter);
+
+  app.post('/editChapter', mid.requiresLogin, mid.requiresSecure, controllers.Novels.editChapter);
+
+  app.post('/publishChapter', mid.requiresLogin, mid.requiresSecure, controllers.Novels.publishChapter);
+
   app.get('/', mid.requiresSecure, controllers.Pages.homePage);
 };
 

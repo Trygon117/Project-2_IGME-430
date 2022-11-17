@@ -1,5 +1,4 @@
 const helper = require('./helper.js');
-const navbar = require('./navbar.jsx');
 
 const handleLogin = (e) => {
     e.preventDefault();
