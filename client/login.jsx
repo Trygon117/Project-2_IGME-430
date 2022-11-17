@@ -44,6 +44,8 @@ const handleSignup = (e) => {
 };
 
 const LoginWindow = (props) => {
+    console.log("login window");
+    console.log(props);
     return (
         <form id="loginForm"
             name="loginForm"
@@ -95,6 +97,8 @@ const renderLoginWindow = async (props) => {
 const SignupWindow = (props) => {
     authenticateUsername = async (e) => {
         const input = e.currentTarget;
+        console.log('signup window - authenitcate username');
+        console.log(props);
         await helper.sendPost('/isUsernameAvailable', { username: e.currentTarget.value, _csrf: props.csrf },
             (response) => {
                 let controlDiv = input.parentElement;
@@ -169,13 +173,18 @@ const SignupWindow = (props) => {
 };
 
 const renderSignUpWindow = async (props) => {
-    ReactDOM.render(<SignupWindow csrf={props.csrf} />,
+    console.log('render signup window');
+    console.log(props._csrf);
+    ReactDOM.render(<SignupWindow csrf={props._csrf} />,
         document.getElementById('login-content'));
 };
 
 const init = async () => {
     const response = await fetch('/getToken');
     const data = await response.json();
+
+    console.log('init login');
+    console.log(data);
 
     ReactDOM.render(<LoginWindow csrf={data.csrfToken} />,
         document.getElementById('login-content')
