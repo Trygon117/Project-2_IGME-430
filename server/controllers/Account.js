@@ -82,6 +82,7 @@ const getLoggedInAs = (req, res) => {
 const getToken = (req, res) => {
   const csrfToken = req.csrfToken();
   req.session.csrfToken = csrfToken;
+  console.log(req.session.csrfToken);
   return res.json({ csrfToken: csrfToken });
 }
 
