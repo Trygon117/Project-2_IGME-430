@@ -70,8 +70,8 @@ app.use((err, req, res, next) => {
 
   console.log('Missing CSRF token!');
 
-  console.log(req.session.csrfToken);
   console.log(req.body);
+  console.log(req.body._csrf);
 
   res.status(500).json({ error: 'Missing CSRF token!' });
 
