@@ -74,7 +74,8 @@ app.use((err, req, res, next) => {
     error: 'Missing CSRF token!',
     stupidData: {
       csrf: req.session.csrfToken,
-      data: req.data
+      data: req.data,
+      proof: "proof",
     },
   });
 
