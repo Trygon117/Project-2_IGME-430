@@ -2,6 +2,7 @@
    entries in the response JSON object, and will handle them appropriately.
 */
 const sendPost = async (url, data, handler) => {
+    console.log(JSON.stringify(data));
     const response = await fetch(url, {
         method: 'POST',
         headers: {

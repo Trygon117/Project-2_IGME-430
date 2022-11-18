@@ -70,6 +70,8 @@ app.use((err, req, res, next) => {
 
   console.log('Missing CSRF token!');
 
+  res.status(500).json({ error: 'Missing CSRF token!' });
+
   return false;
 });
 
