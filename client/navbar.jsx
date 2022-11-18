@@ -1,5 +1,5 @@
 // Navbar for every page
-const Navbar = (props) => {
+const Navbar = () => {
     const clickBurger = (e) => {
         e.preventDefault();
         try {
