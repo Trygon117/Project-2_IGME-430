@@ -79,7 +79,11 @@ const getLoggedInAs = (req, res) => {
   return res.status(200).json({ username: logged.username });
 };
 
-const getToken = (req, res) => res.json({ csrfToken: req.csrfToken() });
+const getToken = (req, res) => {
+  const csrfToken = req.csrfToken();
+  req.session.csrfToken = csrfToken;
+  return res.json({ csrfToken: csrfToken });
+}
 
 module.exports = {
   loginPage,
