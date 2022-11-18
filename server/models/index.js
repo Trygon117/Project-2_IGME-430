@@ -1,3 +1,3 @@
 module.exports.Account = require('./Account.js');
-module.exports.Novels = require('./Novels.js');
-module.exports.Chapters = require('./Chapters.js');
+module.exports.Novel = require('./Novel.js');
+module.exports.Chapter = require('./Chapter.js');

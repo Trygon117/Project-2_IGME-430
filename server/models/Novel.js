@@ -22,6 +22,11 @@ const NovelSchema = new mongoose.Schema({
         trim: true,
         default: "Book Cover",
     },
+    coverMime: {
+        type: String,
+        trim: true,
+        required: true,
+    },
     chapters: {
         type: Number,
         default: 0,
@@ -43,6 +48,8 @@ NovelSchema.statics.toAPI = (doc) => ({
     title: doc.username,
     author: doc.author,
     cover: doc.cover,
+    coverName: doc.coverName,
+    coverMime: doc.coverMime,
     chapters: doc.chapters,
     published: doc.published,
     createdDate: doc.createdDate,

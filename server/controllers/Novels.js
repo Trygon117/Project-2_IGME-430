@@ -1,55 +1,110 @@
 const models = require('../models');
-const helper = require('../helper.js');
 
-const { Novels } = models;
-const { Chapters } = models;
+const { Novel } = models;
+const { Chapter } = models;
 
 //Novels
 
-createNovel = (req, res) => {
-    console.log('Create Novel');
+const createNovel = async (req, res) => {
     const title = `${req.body.title}`;
-    const cover = req.body.cover;
+    const cover = req.files.cover;
 
     const sessionUsername = req.session.account.username;
 
-    console.log(req.files);
 
+    await Novel.find({ author: sessionUsername, title }, async (err, docs) => {
+        if (err) {
+            console.log('an error');
+            console.log(err);
+            return res.status(400).json({ error: `An error has occurred` });
+        } else if (docs.length !== 0) {
+            console.log('novel exists');
+            return res.status(400).json({ error: `User already has novel with title: ${title}` });
+        }
 
-    const usersNovels = Novels.find({ author: sessionUsername });
+        const newNovel = new Novel({
+            title,
+            author: sessionUsername,
+            cover: cover.data,
+            coverName: cover.name,
+            coverMime: cover.mimetype,
+        });
 
-    //console.log(usersNovels);
+        await newNovel.save();
 
+        req.session.currentNovel = Novel.toAPI(newNovel);
+
+        return res.json({ createdNovel: req.session.currentNovel });
+    }).clone().catch((err) => {
+        console.log('caught error');
+        console.log(err);
+        return res.status(400).json({ error: `An error has occurred` });
+
+    });
 };
 
-publishNovel = (req, res) => {
+const publishNovel = (req, res) => {
     console.log('Publish Novel');
 };
 
-editNovel = (req, res) => {
+const editNovel = (req, res) => {
     console.log('Edit Novel');
 };
 
-deleteNovel = (req, res) => {
+const deleteNovel = (req, res) => {
     console.log('Delete Novel');
 };
 
 // Chapters
 
-createChapter = (req, res) => {
+const createChapter = (req, res) => {
     console.log('Create Chapter');
 };
 
-publishChapter = (req, res) => {
+const publishChapter = (req, res) => {
     console.log('Publish Chapter');
 };
 
-editChapter = (req, res) => {
+const editChapter = (req, res) => {
     console.log('Delete Chapter');
 };
 
-deleteChapter = (req, res) => {
+const deleteChapter = (req, res) => {
     console.log('Delete Chapter');
+};
+
+// Searching
+
+const searchNovelsByUser = async (req, res) => {
+    const sessionUsername = req.session.account.username;
+    const searchedUser = req.body.user;
+
+    let seeUnpublished = false;
+
+    if (sessionUsername === searchedUser) {
+        seeUnpublished = true;
+    }
+
+    await Novel.find({ author: searchedUser }, (err, docs) => {
+        if (err) {
+            console.log('an error');
+            console.log(err);
+            return res.status(400).json({ error: `An error has occurred` });
+        } else {
+            //console.log(docs);
+            if (!seeUnpublished) {
+                console.log('filtering');
+                docs.filter((doc) => {
+                    return doc.published
+                });
+            }
+            return res.status(200).json({ novels: docs });
+        }
+    }).clone().catch((err) => {
+        console.log('caught error');
+        console.log(err);
+        return res.status(400).json({ error: `An error has occurred` });
+    });
 };
 
 module.exports = {
@@ -61,4 +116,5 @@ module.exports = {
     publishChapter,
     editChapter,
     deleteChapter,
+    searchNovelsByUser,
 };

@@ -28,12 +28,12 @@ const Navbar = (props) => {
                     <a id="home" className="navbar-item is-tab" href='/home'>Home</a>
                     <a id="create" className="navbar-item is-tab" href='/create'>Create</a>
                     <a id="library" className="navbar-item is-tab" href='/library'>Library</a>
-                    <a id="profile" className="navbar-item is-tab" href='/profile'>Profile</a>
                 </div>
                 <div className="navbar-end">
                     <a id="login" className="navbar-item is-tab" onClick={updateSelectedPage}>Login</a>
                     <a id="signup" className="navbar-item is-tab" onClick={updateSelectedPage}>Sign Up</a>
                     <a id="signout" className="navbar-item is-tab">Sign Out</a>
+                    <a id="profile" className="navbar-item is-tab" href='/profile'><i className="fa-solid fa-user"></i></a>
                 </div>
             </div>
         </nav>
@@ -59,7 +59,6 @@ const updateSelectedPage = () => {
                 } else {
                     loginButton.classList = 'navbar-item is-tab';
                     signUpButton.classList = 'navbar-item is-tab is-active';
-                    console.log(signUpButton.classList.value);
                 }
             } else {
                 navItem.classList = 'navbar-item is-tab is-active';
@@ -82,6 +81,8 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
     updateSelectedPage();
 
     let signOutButton = document.getElementById('signout');
+    let profileIcon = document.getElementById('profile');
+
     let signUpButton = document.getElementById('signup');
     let loginButton = document.getElementById('login');
 
@@ -89,6 +90,8 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
     if (data.loggedIn) {
         // hide the log in and sign up buttons, and show the Log Out button
         signOutButton.style.display = 'flex';
+        profileIcon.style.display = 'flex';
+
         signUpButton.style.display = 'none';
         loginButton.style.display = 'none';
 
@@ -102,6 +105,8 @@ const initializeNavbar = async (passedFunctions, _csrf) => {
     } else {
         // hide the log out button, and show the log in and sign up buttons
         signOutButton.style.display = 'none';
+        profileIcon.style.display = 'none';
+
         signUpButton.style.display = 'flex';
         loginButton.style.display = 'flex';
 

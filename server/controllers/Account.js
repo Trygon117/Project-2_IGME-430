@@ -74,6 +74,11 @@ const isLoggedIn = (req, res) => {
   return res.status(200).json({ loggedIn: false });
 };
 
+const getLoggedInAs = (req, res) => {
+  const logged = req.session.account;
+  return res.status(200).json({ username: logged.username });
+};
+
 const getToken = (req, res) => res.json({ csrfToken: req.csrfToken() });
 
 module.exports = {
@@ -84,4 +89,5 @@ module.exports = {
   getToken,
   isUsernameAvailable,
   isLoggedIn,
+  getLoggedInAs,
 };

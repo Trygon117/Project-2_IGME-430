@@ -15,13 +15,10 @@ const sendPost = async (url, data, handler) => {
     handleResponse(result, data, handler);
 };
 
-const sendMultipartPost = async (url, FData, handler) => {
+const sendMultipartPost = async (url, data, handler) => {
     const response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-        body: FData
+        body: data.formData,
     });
 
     const result = await response.json();
@@ -33,7 +30,7 @@ const sendMultipartPost = async (url, FData, handler) => {
 const handleResponse = (result, data, handler) => {
     if (result.error) {
         console.log(result.error);
-        return;
+        //return;
     }
 
     if (result.redirect) {
