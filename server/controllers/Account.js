@@ -10,7 +10,7 @@ const loginPage = (req, res) => {
 
 const logout = (req, res) => {
   req.session.destroy();
-  res.redirect('/');
+  res.json({ redirect: '/' });
 };
 
 const login = (req, res) => {

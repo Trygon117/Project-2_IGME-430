@@ -66,7 +66,7 @@ app.use(cookieParser());
 
 app.use(csrf({
   value: (req) => {
-    console.log(`csrf value: ${req.body._csrf}`);
+    //console.log(`csrf value: ${req.body._csrf}`);
     return req.body._csrf;
   }
 }));
