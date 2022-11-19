@@ -4,8 +4,8 @@ const { Account } = models;
 
 const loginPage = (req, res) => {
   const csrfToken = req.csrfToken();
-  console.log(`Login Page csrf: ${csrfToken}`);
-  res.render('login', { csrfToken: csrfToken });
+  //console.log(`Login Page csrf: ${csrfToken}`);
+  res.render('login', { csrfToken });
 };
 
 const logout = (req, res) => {
@@ -83,9 +83,9 @@ const getLoggedInAs = (req, res) => {
 
 const getToken = (req, res) => {
   const csrfToken = req.csrfToken();
-  console.log(`Get Token csrf: ${csrfToken}`);
-  return res.json({ csrfToken: csrfToken });
-}
+  //console.log(`Get Token csrf: ${csrfToken}`);
+  return res.json({ csrfToken });
+};
 
 module.exports = {
   loginPage,

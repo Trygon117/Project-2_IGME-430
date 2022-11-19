@@ -1,0 +1,199 @@
+● What is the intended purpose of your application?
+My application allows users to make an account, and upload chapters of a novel on a regular schedule so that other users can read it.
+
+● What work has been completed for this milestone?
+I made a pretty polished login / signup form as well as navigation. Users can also make new Novels and upload covers for them, but they cannot write chapters yet.
+
+● What work is left, and how do you plan to complete it?
+Users need to be able to edit information about their novels, create chapters, edit chapters, search for novels, read novels, and possible leave reviews
+
+○ What does your timeline/roadmap look like to finish on time?
+I think that I have gotten a lot of the complicated things out of the way at this point, and most of my work will involve making it look nice, though I still need to make all the server side functions as well
+I am planning on working on this a bit over break, but I believe I will be able to finish this project on time.
+
+● How are you using React?
+I have a controllers file that will load the correct jsx file depending on what page the user is on. All of my handlebars files are pretty bare bones, and get filled in with react.
+
+○ What components have you made?
+I have made a login component, a signup component, a novel card component, an empty card component, a novel cards component, and a create novels component
+
+○ What components do you still plan to add?
+I will need to make several for every page. Off the top of my head I can think of a library component, a read book component, a review book component, an about book component, a profile component, a search book component, and a home component
+
+● What data are you storing in MongoDB?
+Im saving account data, novel data, and chapter data
+
+○ What data do you still need to store?
+chapter data isnt actually being stored yet, and I might have review data, though that might just go with novel data
+
+● What is your profit model?
+Chapters / Subscriptions
+
+○ Have you implemented it yet?
+No
+■ If not, what is your plan to implement it?
+When people read chapters they will be served with adds after a certain amount of words / paragraphs. Users have the option to pay for premium, which disables adds (and could give them advanced access to chapters).
+
+● Do you have a plan for going above and beyond? If so, what is it?
+So far I haven't thought of anything that would greatly improve my project that we haven't done in class, though I have implemented many things in different and better ways than we have in class so far. I also pretty much had to relearn how to do file upload stuff because it wasn't working correctly.
+I also might try to make some sort of custom data storage type that I can use to add things like bold to stored text
+Maybe I will try to actually implement google ad sense if I can't think of anything else.
+
+● If you used any borrowed code or code fragments, where did you get them from?
+Only from stuff we've done in class I believe
+
+Endpoint Documentation
+You must document each data endpoint (each one listed in your router.js) with the
+following information:
+● The URL of the endpoint
+● The supported methods of the endpoint (GET, POST, etc)
+● What middleware the endpoint uses.
+● Any query/body parameters that the endpoint accepts/requires.
+● A brief description of what the endpoint does and returns.
+
+URL: /getToken
+Supported Methods: GET
+Middleware: Requires Secure
+Query Params: 
+Description: gives back a csrf token
+Return Type(s): JSON
+
+URL: /login
+Supported Methods: GET, POST
+Middleware: Requires Secure, Requires Logout
+Query Params: login credentials
+Description: If POST logs the user in. If GET it renders the login page
+Return Type(s): JSON
+
+URL: /signup
+Supported Methods: POST
+Middleware: Requires Secure, Requires Logout
+Query Params: signup credentials
+Description: Signs up the user if their credentials are valid
+Return Type(s): JSON
+
+URL: /isUsernameAvailable
+Supported Methods: POST
+Middleware: Requires Secure, Requires Logout
+Query Params: a username
+Description: lets user know if the given username already exists
+Return Type(s): JSON
+
+URL: /isLoggedIn
+Supported Methods: GET
+Middleware: Requires Secure
+Query Params: 
+Description: returns a boolean that lets the user know if they are currently logged in
+Return Type(s): JSON
+
+URL: /isLoggedInAs
+Supported Methods: GET
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: Returns the username of the account that the user is logged in as
+Return Type(s): JSON
+
+URL: /logout
+Supported Methods: GET
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: Logs the user out
+Return Type(s): JSON
+
+URL: /home
+Supported Methods: GET
+Middleware: Requires Secure
+Query Params: 
+Description: renders the home page
+Return Type(s): 
+
+URL: /create
+Supported Methods: GET
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: renders the create page
+Return Type(s): 
+
+URL: /library
+Supported Methods: GET
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: renders the library page
+Return Type(s): 
+
+URL: /profile
+Supported Methods: GET
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: renders the profile page
+Return Type(s): 
+
+URL: /createNovel
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: Title, Cover File
+Description: Creates a new novel and adds it to the novels database
+Return Type(s): JSON
+
+URL: /deleteNovel
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /editNovel
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /publishNovel
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /createChapter
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /deleteChapter
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /editChapter
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /publishChapter
+Supported Methods: POST
+Middleware: Requires Secure, Requires Login
+Query Params: 
+Description: NOT IMPLEMENTED
+Return Type(s): JSON
+
+URL: /searchNovelsByUser
+Supported Methods: POST
+Middleware: Requires Secure
+Query Params: user
+Description: searches all novels created by the given user, and if they are searching for themselves, it shows unpublished novels as well
+Return Type(s): JSON
+
+URL: /
+Supported Methods: POST
+Middleware: Requires Secure
+Query Params: 
+Description: opens homePage
+Return Type(s): JSON

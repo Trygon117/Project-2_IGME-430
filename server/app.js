@@ -64,12 +64,7 @@ app.set('view engine', 'handlebars');
 app.set('views', `${__dirname}/../views`);
 app.use(cookieParser());
 
-app.use(csrf({
-  value: (req) => {
-    //console.log(`csrf value: ${req.body._csrf}`);
-    return req.body._csrf;
-  }
-}));
+app.use(csrf({ value: (req) => req.body._csrf }));
 app.use((err, req, res, next) => {
   if (err.code !== 'EBADCSRFTOKEN') return next(err);
 

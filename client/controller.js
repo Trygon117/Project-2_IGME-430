@@ -37,7 +37,9 @@ const init = async () => {
         case 'login':
             await login.init();
             if (localStorage.getItem('partchment-LoadSignUp') === 'true') {
-                login.renderSignUpWindow(data);
+                console.log("controller login");
+                console.log(data);
+                login.renderSignUpWindow({ _csrf: data.csrfToken });
                 window.localStorage.setItem('partchment-LoadSignUp', false);
             }
             navbar.updateSelectedPage();

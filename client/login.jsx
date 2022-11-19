@@ -174,6 +174,7 @@ const SignupWindow = (props) => {
 
 const renderSignUpWindow = async (props) => {
     console.log('render signup window');
+    console.log(props);
     console.log(props._csrf);
     ReactDOM.render(<SignupWindow csrf={props._csrf} />,
         document.getElementById('login-content'));

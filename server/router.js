@@ -43,7 +43,7 @@ const router = (app) => {
 
   app.post('/publishChapter', mid.requiresLogin, mid.requiresSecure, controllers.Novels.publishChapter);
 
-  //Searching
+  // Searching
   app.post('/searchNovelsByUser', mid.requiresSecure, controllers.Novels.searchNovelsByUser);
 
   app.get('/', mid.requiresSecure, controllers.Pages.homePage);
