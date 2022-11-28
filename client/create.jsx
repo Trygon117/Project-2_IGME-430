@@ -1,6 +1,7 @@
 const helper = require('./helper.js');
 const Buffer = require('buffer').Buffer;
 
+// Render the My Novels page and create a novels-card div
 const MyNovels = (props) => {
     return (
         <div>
@@ -14,17 +15,12 @@ const MyNovels = (props) => {
     );
 };
 
+// create a Novel card for the given novel data
 const NovelCard = (props) => {
-    console.log(props.novel);
-    console.log(props.novel.cover);
-    const novel = props.novel;
-    const _csrf = props._csrf;
-
+    // turn the cover data into a displayable image
     const buf = Buffer.from(props.novel.cover.data, 'base64');
     const b64String = buf.toString('base64');
-
     const mimeType = props.novel.coverMime;
-
     const coverImage = `data:${mimeType};base64,${b64String}`;
 
     const hoverOnCard = (e) => {
@@ -35,6 +31,10 @@ const NovelCard = (props) => {
     };
     const clickCard = (e) => {
         console.log(`Card clicked: ${e.currentTarget}`);
+        //console.log(props);
+
+        window.localStorage.setItem('partchment-editorNovelID', props.novel._id);
+        window.location.assign('/editNovel');
     };
 
     return (
@@ -48,6 +48,7 @@ const NovelCard = (props) => {
     );
 };
 
+// create an empty novel card
 const EmptyCard = (props) => {
     const hoverOnCard = (e) => {
         e.currentTarget.style.width = 250;
@@ -69,6 +70,7 @@ const EmptyCard = (props) => {
     );
 };
 
+// populate the novel-cards div with novels created by the current user
 const loadMyNovels = async (csrf) => {
 
     const loggedInAsResponse = await fetch('/getLoggedInAs');
@@ -195,6 +197,7 @@ const CreateNovel = (props) => {
     );
 };
 
+// handler for after a new novel is created
 handleCreateNovel = (e) => {
     e.preventDefault();
 
@@ -225,6 +228,7 @@ handleCreateNovel = (e) => {
     helper.sendMultipartPost('/createNovel', data, createdNovel);
 };
 
+// intermediate handler for after a novel is created
 const createdNovel = (response) => {
     loadMyNovels(response.csrfToken);
 };

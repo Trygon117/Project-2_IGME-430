@@ -15,11 +15,13 @@ const router = (app) => {
 
   app.get('/getLoggedInAs', mid.requiresLogin, mid.requiresSecure, controllers.Account.getLoggedInAs);
 
-  app.get('/logout', mid.requiresLogin, controllers.Account.logout);
+  app.get('/logout', mid.requiresLogin, mid.requiresSecure, controllers.Account.logout);
 
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);
 
   app.get('/create', mid.requiresSecure, mid.requiresLogin, controllers.Pages.createPage);
+
+  app.get('/editNovel', mid.requiresSecure, mid.requiresLogin, controllers.Pages.editNovelPage);
 
   app.get('/library', mid.requiresSecure, mid.requiresLogin, controllers.Pages.libraryPage);
 
@@ -45,6 +47,8 @@ const router = (app) => {
 
   // Searching
   app.post('/searchNovelsByUser', mid.requiresSecure, controllers.Novels.searchNovelsByUser);
+
+  app.post('/searchNovelByID', mid.requiresSecure, controllers.Novels.searchNovelByID);
 
   app.get('/', mid.requiresSecure, controllers.Pages.homePage);
 };

@@ -102,6 +102,27 @@ const searchNovelsByUser = async (req, res) => {
   });
 };
 
+const searchNovelByID = async (req, res) => {
+  const sessionUsername = req.session.account.username;
+  const searchedID = req.body.novelID;
+
+  console.log(`Searching for novel by ID: ${searchedID}`);
+
+  await Novel.findById(searchedID, (err, docs) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      return res.status(400).json({ error: 'An error has occurred' });
+    }
+    //console.log(docs);
+    return res.status(200).json({ novel: docs });
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    return res.status(400).json({ error: 'An error has occurred' });
+  });
+}
+
 module.exports = {
   createNovel,
   publishNovel,
@@ -112,4 +133,5 @@ module.exports = {
   editChapter,
   deleteChapter,
   searchNovelsByUser,
+  searchNovelByID,
 };
