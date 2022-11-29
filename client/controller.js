@@ -1,5 +1,6 @@
 const create = require('./create.jsx');
-const eNovel = require('./editNovel.jsx')
+const editNovel = require('./editNovel.jsx')
+const editChapter = require('./editChapter.jsx')
 const home = require('./home.jsx');
 const library = require('./library.jsx');
 const login = require('./login.jsx');
@@ -32,7 +33,10 @@ const init = async () => {
             create.init();
             break;
         case 'editNovel':
-            eNovel.init();
+            editNovel.init();
+            break;
+        case 'editChapter':
+            editChapter.init();
             break;
         case 'home':
             home.init();

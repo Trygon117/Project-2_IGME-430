@@ -24,10 +24,18 @@ const NovelCard = (props) => {
     const coverImage = `data:${mimeType};base64,${b64String}`;
 
     const hoverOnCard = (e) => {
+        const cardTitle = document.getElementById(`${props.novel.title}-title`);
+        cardTitle.classList.add('is-size-4');
+        cardTitle.classList.remove('is-size-5');
         e.currentTarget.style.width = 250;
+        e.currentTarget.style.height = 450;
     };
     const hoverOffCard = (e) => {
+        const cardTitle = document.getElementById(`${props.novel.title}-title`);
+        cardTitle.classList.add('is-size-5');
+        cardTitle.classList.remove('is-size-4');
         e.currentTarget.style.width = 200;
+        e.currentTarget.style.height = 360;
     };
     const clickCard = (e) => {
         console.log(`Card clicked: ${e.currentTarget}`);
@@ -38,12 +46,15 @@ const NovelCard = (props) => {
     };
 
     return (
-        <div className="card" style={{ width: 200 }} onMouseEnter={hoverOnCard} onMouseLeave={hoverOffCard} onClick={clickCard}>
-            <div className="card-image">
-                <figure className="image is-2by3">
-                    <img id={`${props.novel.title}-img`} src={coverImage} alt="Placeholder image" />
-                </figure>
+        <div style={{ border: 'ridge thin', width: 200, height: 360 }} onMouseEnter={hoverOnCard} onMouseLeave={hoverOffCard} onClick={clickCard}>
+            <div className="card" >
+                <div className="card-image">
+                    <figure className="image is-2by3">
+                        <img id={`${props.novel.title}-img`} src={coverImage} alt="Placeholder image" />
+                    </figure>
+                </div>
             </div>
+            <h1 id={`${props.novel.title}-title`} className='is-size-5 has-text-centered has-text-grey' style={{ overflow: "hidden" }}>{props.novel.title}</h1>
         </div>
     );
 };
@@ -82,6 +93,7 @@ const loadMyNovels = async (csrf) => {
     );
 
     const gotNovels = (response) => {
+        console.log(response);
         novels = response.novels;
         novels.forEach(novel => {
             const newCardID = novel.title.toLowerCase().replace(' ', '_');
@@ -130,7 +142,16 @@ const CreateNovel = (props) => {
 
         return (
             <div>
-                <button className="button is-primary is-outlined" onClick={gotoLoadMyNovels}>Back</button>
+                <div style={{ height: 20 }} />
+
+                <div className='columns' style={{ height: 65, width: '100vw', border: 'thin ridge' }}>
+                    <div className='column is-offset-0'>
+                        <a className="button is-white" onClick={gotoLoadMyNovels}><i className="fa-solid fa-arrow-left" style={{ padding: '0 10 0 0' }}></i>Back</a>
+                    </div>
+                </div>
+
+                <div style={{ height: 10 }} />
+
                 <form id="createNovelForm"
                     name="createNovelForm"
                     onSubmit={handleCreateNovel}

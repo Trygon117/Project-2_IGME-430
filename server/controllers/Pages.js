@@ -8,7 +8,9 @@ const libraryPage = (req, res) => res.render('library');
 
 const profilePage = (req, res) => res.render('profile');
 
-const editNovelPage = (req, res) => res.render('edit-novel');
+const editNovelPage = (req, res) => res.render('editNovel');
+
+const editChapterPage = (req, res) => res.render('editChapter');
 
 module.exports = {
   homePage,
@@ -16,4 +18,5 @@ module.exports = {
   libraryPage,
   profilePage,
   editNovelPage,
+  editChapterPage,
 };

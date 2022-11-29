@@ -23,6 +23,8 @@ const router = (app) => {
 
   app.get('/editNovel', mid.requiresSecure, mid.requiresLogin, controllers.Pages.editNovelPage);
 
+  app.get('/editChapter', mid.requiresSecure, mid.requiresLogin, controllers.Pages.editChapterPage);
+
   app.get('/library', mid.requiresSecure, mid.requiresLogin, controllers.Pages.libraryPage);
 
   app.get('/profile', mid.requiresSecure, mid.requiresLogin, controllers.Pages.profilePage);
@@ -49,6 +51,8 @@ const router = (app) => {
   app.post('/searchNovelsByUser', mid.requiresSecure, controllers.Novels.searchNovelsByUser);
 
   app.post('/searchNovelByID', mid.requiresSecure, controllers.Novels.searchNovelByID);
+
+  app.post('/searchChapterByID', mid.requiresSecure, controllers.Novels.searchChapterByID);
 
   app.get('/', mid.requiresSecure, controllers.Pages.homePage);
 };
