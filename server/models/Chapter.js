@@ -86,7 +86,71 @@ const searchByID = async (req, chapterID) => {
   });
 };
 
+// update the content of a specific chapter
+const updateChapterByID = async (req, updates) => {
+  const sessionUsername = req.session.account.username;
+
+  const chapter = await ChapterModel.findById(updates.chapterID, (err, doc) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      return { error: 'An error has occurred' };
+    }
+
+    // You can only update novels that you are the author of
+    if (!doc.published && doc.author != sessionUsername) {
+      return { error: "User does not have permission to edit the data of this novel " };
+    }
+
+    return doc;
+
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    return { error: 'An error has occurred' };
+  });
+
+  if (chapter.error) {
+    return chapter.error;
+  }
+
+  Object.entries(updates).forEach(entry => {
+    const [key, value] = entry;
+    switch (key) {
+      case "title":
+        chapter.title = value;
+        break;
+      case "author":
+        chapter.author = value;
+        break;
+      case "novelID":
+        chapter.novelID = value;
+        break;
+      case "chapter":
+        chapter.chapter = value;
+        break;
+      case "content":
+        chapter.content = value;
+        break;
+      case "published":
+        chapter.published = value;
+        break;
+      case "views":
+        chapter.views = value;
+        break;
+      default:
+        break;
+    }
+  });
+
+  result = await chapter.save();
+  //console.log("updated");
+  //console.log(result);
+  return result;
+};
+
 module.exports = {
   ChapterModel,
   searchByID,
+  updateChapterByID,
 };

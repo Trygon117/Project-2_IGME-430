@@ -1,3 +1,14 @@
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+
 #login-content {
     padding-top: 200px;
 }
@@ -26,4 +37,16 @@
 #signup-error-span {
     position: absolute;
     float: left;
+}
+
+.bold-span {
+    font-weight: bold;
+}
+
+.italic-span {
+    font-style: italic;
+}
+
+.underline-span {
+    text-decoration: underline;
 }

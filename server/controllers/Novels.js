@@ -137,8 +137,16 @@ const publishChapter = (req, res) => {
   console.log('Publish Chapter');
 };
 
-const editChapter = (req, res) => {
-  console.log('Delete Chapter');
+const editChapter = async (req, res) => {
+  console.log('Edit Chapter');
+
+  updatedChapter = await Chapter.updateChapterByID(req, req.body);
+
+  if (response.error) {
+    return res.status(400).json(updatedChapter);
+  }
+
+  return res.status(200).json({ updatedChapter });
 };
 
 const deleteChapter = (req, res) => {
