@@ -83,18 +83,23 @@ NovelModel = mongoose.model('Novels', NovelSchema);
 // helper functions
 
 // find a single novel by its _id
-const searchByID = async (req, novelID) => {
+const searchByID = async (req, novelID, handler) => {
   const sessionUsername = req.session.account.username;
 
-  return await NovelModel.findById(novelID, (err, doc) => {
+  await NovelModel.findById(novelID, (err, doc) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      return { error: 'An error has occurred' };
+      handler({ error: 'An error has occurred' });
+      return;
     }
 
+    console.log(doc);
+
     if (doc === null) {
-      return { error: "No Novel Found" };
+      console.log('doc is null');
+      handler({ error: "No Novel Found" });
+      return;
     }
 
     let novel = doc;
@@ -107,23 +112,26 @@ const searchByID = async (req, novelID) => {
     //console.log("searchByID (Novel.js)");
     //console.log({ novel });
 
-    return { novel };
+    handler({ novel });
+    return;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    return { error: 'An error has occurred' };
+    handler({ error: 'An error has occurred' });
+    return;
   });
 };
 
 // find multiple novels that meet the given filter requirements
-const searchByCriteria = async (req, novelFilters) => {
+const searchByCriteria = async (req, novelFilters, handler) => {
   const sessionUsername = req.session.account.username;
 
-  return await NovelModel.find(novelFilters, (err, docs) => {
+  await NovelModel.find(novelFilters, (err, docs) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      return { error: 'An error has occurred' };
+      handler({ error: 'An error has occurred' });
+      return;
     }
 
     const novels = {};
@@ -141,7 +149,8 @@ const searchByCriteria = async (req, novelFilters) => {
 
     if (Object.keys(novels).length === 0) {
       console.log('No Novels Found.');
-      return { error: 'No Novels Found.' };
+      handler({ error: 'No Novels Found.' });
+      return;
     }
 
     // console.log("searchByCriteria (Novel.js)");
@@ -149,79 +158,77 @@ const searchByCriteria = async (req, novelFilters) => {
 
     console.log('found novels');
 
-    return { novels };
+    handler({ novels });
+    return
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    return { error: 'An error has occurred' };
+    handler({ error: 'An error has occurred' });
+    return;
   });
 };
 
 
 // update the content of a specific novel
-const updateNovelByID = async (req, updates) => {
+const updateNovelByID = async (req, updates, handler) => {
   const sessionUsername = req.session.account.username;
 
-  const novel = await NovelModel.findById(updates.novelID, (err, doc) => {
+  await NovelModel.findById(updates.novelID, async (err, novel) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      return { error: 'An error has occurred' };
+      handler({ error: 'An error has occurred' });
+      return;
     }
 
     // You can only update novels that you are the author of
-    if (!doc.published && doc.author != sessionUsername) {
-      return { error: "User does not have permission to edit the data of this novel " };
+    if (!novel.published && novel.author != sessionUsername) {
+      handler({ error: "User does not have permission to edit the data of this novel " });
+      return;
     }
 
-    return doc;
+    Object.entries(updates).forEach(entry => {
+      const [key, value] = entry;
+      switch (key) {
+        case "title":
+          novel.title = value;
+          break;
+        case "author":
+          novel.author = value;
+          break;
+        case "cover":
+          novel.cover = value;
+          break;
+        case "coverName":
+          novel.coverName = value;
+          break;
+        case "coverMime":
+          novel.coverMime = value;
+          break;
+        case "abstract":
+          novel.abstract = value;
+          break;
+        case "chapters":
+          novel.chapters = value;
+          break;
+        case "publicationDate":
+          novel.publicationDate = value;
+          break;
+        default:
+          break;
+      }
+    });
+
+    result = await novel.save();
+
+    handler({ result });
 
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    return { error: 'An error has occurred' };
+    novelReponse = { error: 'An error has occurred' };
+    return;
   });
-
-  if (novel.error) {
-    return novel.error;
-  }
-
-  Object.entries(updates).forEach(entry => {
-    const [key, value] = entry;
-    switch (key) {
-      case "title":
-        novel.title = value;
-        break;
-      case "author":
-        novel.author = value;
-        break;
-      case "cover":
-        novel.cover = value;
-        break;
-      case "coverName":
-        novel.coverName = value;
-        break;
-      case "coverMime":
-        novel.coverMime = value;
-        break;
-      case "abstract":
-        novel.abstract = value;
-        break;
-      case "chapters":
-        novel.chapters = value;
-        break;
-      case "publicationDate":
-        novel.publicationDate = value;
-        break;
-      default:
-        break;
-    }
-  });
-
-  result = await novel.save();
-  //console.log("updated");
-  //console.log(result);
-  return result;
 };
 
 module.exports = {

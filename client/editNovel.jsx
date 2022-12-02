@@ -224,6 +224,7 @@ const EditNovelWindow = (props) => {
                                     <th style={{ padding: 0, paddingLeft: 10, width: 50 }}><abbr title="Chapter">Chapter</abbr></th>
                                     <th style={{ padding: 0, width: 100 }}><abbr title="Name">Name</abbr></th>
                                     <th style={{ padding: 0, width: 50 }}><abbr title="Views">Views</abbr></th>
+                                    <th style={{ padding: 0, width: 50 }}> <abbr title="Publish">Publish</abbr></th>
                                     <th style={{ padding: 0, width: 50 }}> <abbr title="Delete">Delete</abbr></th>
                                 </tr>
                             </thead>
@@ -249,12 +250,14 @@ const loadChapters = async (chapters) => {
             const chapterNumber = document.createElement('th');
             const chapterTitle = document.createElement('td');
             const chapterViews = document.createElement('td');
+            const chapterPublish = document.createElement('td');
             const chapterDelete = document.createElement('td');
 
             console.log(`chapter ${chapter}`);
             console.log(chapters);
 
             chapterRow.style.width = '100%';
+            chapterRow.style.cursor = 'hand';
             chapterRow.addEventListener('click', () => {
                 window.localStorage.setItem('partchment-editorChapterID', chapters[chapter]._id);
                 window.location.assign('/editChapter');
@@ -271,9 +274,18 @@ const loadChapters = async (chapters) => {
             deleteButton.appendChild(deleteIcon);
             chapterDelete.appendChild(deleteButton);
 
+            const publishButton = document.createElement('a');
+            const publishIcon = document.createElement('i');
+            publishIcon.classList = "fa-solid fa-upload";
+
+            publishButton.appendChild(publishIcon);
+            chapterPublish.appendChild(publishButton);
+
+
             chapterRow.appendChild(chapterNumber);
             chapterRow.appendChild(chapterTitle);
             chapterRow.appendChild(chapterViews);
+            chapterRow.appendChild(chapterPublish);
             chapterRow.appendChild(chapterDelete);
             chaptersTableBody.appendChild(chapterRow);
         }
@@ -303,6 +315,7 @@ const loadDrafts = async (chapters) => {
             const chapterNumber = document.createElement('th');
             const chapterTitle = document.createElement('td');
             const chapterViews = document.createElement('td');
+            const chapterPublish = document.createElement('td');
             const chapterDelete = document.createElement('td');
 
             console.log(`chapter ${chapter}`);
@@ -325,9 +338,17 @@ const loadDrafts = async (chapters) => {
             deleteButton.appendChild(deleteIcon);
             chapterDelete.appendChild(deleteButton);
 
+            const publishButton = document.createElement('a');
+            const publishIcon = document.createElement('i');
+            publishIcon.classList = "fa-solid fa-upload";
+
+            publishButton.appendChild(publishIcon);
+            chapterPublish.appendChild(publishButton);
+
             chapterRow.appendChild(chapterNumber);
             chapterRow.appendChild(chapterTitle);
             chapterRow.appendChild(chapterViews);
+            chapterRow.appendChild(chapterPublish);
             chapterRow.appendChild(chapterDelete);
             chaptersTableBody.appendChild(chapterRow);
         }
@@ -335,6 +356,7 @@ const loadDrafts = async (chapters) => {
 };
 
 const getChapters = async (novel, _csrf, handler) => {
+    console.log('get chapters');
     console.log(novel);
 
     const chapterIDs = novel.chapters;
@@ -371,7 +393,7 @@ const init = async () => {
 
 
     helper.sendPost('/searchNovelByID', { novelID, _csrf: data.csrfToken }, async (novelData) => {
-
+        console.log(novelData);
         await getChapters(novelData.novel, data.csrfToken, (chapters) => {
             ReactDOM.render(<EditNovelWindow csrf={data.csrfToken} novel={novelData.novel} chapters={chapters} />,
                 document.getElementById('edit-novel-content')

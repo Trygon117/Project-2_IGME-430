@@ -57,18 +57,20 @@ ChapterModel = mongoose.model('Chapters', ChapterSchema);
 // helper functions
 
 // find a single novel by its _id
-const searchByID = async (req, chapterID) => {
+const searchByID = async (req, chapterID, handler) => {
   const sessionUsername = req.session.account.username;
 
-  return await ChapterModel.findById(chapterID, (err, doc) => {
+  await ChapterModel.findById(chapterID, (err, doc) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      return { error: 'An error has occurred' };
+      handler({ error: 'An error has occurred' });
+      return;
     }
 
     if (doc === null) {
-      return { error: "No Chapter Found" };
+      handler({ error: "No Chapter Found" });
+      return;
     }
 
     let chapter = doc;
@@ -78,75 +80,84 @@ const searchByID = async (req, chapterID) => {
       chapter = { published: false };
     }
 
-    return { chapter };
+    handler({ chapter });
+    return;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    return { error: 'An error has occurred' };
+    handler({ error: 'An error has occurred' });
+    return;
   });
 };
 
 // update the content of a specific chapter
-const updateChapterByID = async (req, updates) => {
+const updateChapterByID = async (req, updates, handler) => {
   const sessionUsername = req.session.account.username;
 
-  const chapter = await ChapterModel.findById(updates.chapterID, (err, doc) => {
+  await ChapterModel.findById(updates.chapterID, async (err, chapter) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      return { error: 'An error has occurred' };
+      handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    if (!chapter) {
+      handler({ error: 'No Chapter Found' });
+      return;
     }
 
     // You can only update novels that you are the author of
-    if (!doc.published && doc.author != sessionUsername) {
-      return { error: "User does not have permission to edit the data of this novel " };
+    if (!chapter.published && chapter.author != sessionUsername) {
+      handler({ error: "User does not have permission to edit the data of this novel " });
+      return;
     }
 
-    return doc;
+    if (chapterResponse.error) {
+      return chapterResponse.error;
+    }
+
+    Object.entries(updates).forEach(entry => {
+      const [key, value] = entry;
+      switch (key) {
+        case "title":
+          chapter.title = value;
+          break;
+        case "author":
+          chapter.author = value;
+          break;
+        case "novelID":
+          chapter.novelID = value;
+          break;
+        case "chapter":
+          chapter.chapter = value;
+          break;
+        case "content":
+          chapter.content = value;
+          break;
+        case "published":
+          chapter.published = value;
+          break;
+        case "views":
+          chapter.views = value;
+          break;
+        default:
+          break;
+      }
+    });
+
+    result = await chapter.save();
+    //console.log("updated");
+    //console.log(result);
+    handler(result);
+    return;
 
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    return { error: 'An error has occurred' };
+    handler({ error: 'An error has occurred' });
+    return;
   });
-
-  if (chapter.error) {
-    return chapter.error;
-  }
-
-  Object.entries(updates).forEach(entry => {
-    const [key, value] = entry;
-    switch (key) {
-      case "title":
-        chapter.title = value;
-        break;
-      case "author":
-        chapter.author = value;
-        break;
-      case "novelID":
-        chapter.novelID = value;
-        break;
-      case "chapter":
-        chapter.chapter = value;
-        break;
-      case "content":
-        chapter.content = value;
-        break;
-      case "published":
-        chapter.published = value;
-        break;
-      case "views":
-        chapter.views = value;
-        break;
-      default:
-        break;
-    }
-  });
-
-  result = await chapter.save();
-  //console.log("updated");
-  //console.log(result);
-  return result;
 };
 
 module.exports = {

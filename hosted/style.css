@@ -8,6 +8,10 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
+tr {
+    cursor: hand;
+}
+
 
 #login-content {
     padding-top: 200px;

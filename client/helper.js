@@ -2,6 +2,7 @@
    entries in the response JSON object, and will handle them appropriately.
 */
 const sendPost = async (url, data, handler) => {
+    console.log(url);
     //console.log(JSON.stringify(data));
     if (!data._csrf) {
         console.log("Missing CSRF Token, request not sent");
@@ -35,7 +36,8 @@ const sendMultipartPost = async (url, data, handler) => {
 const handleResponse = (result, data, handler) => {
     if (result.error) {
         console.log(result.error);
-        //return;
+        console.log(result);
+        return;
     }
 
     if (result.redirect) {

@@ -15,8 +15,14 @@ const EditChapterWindow = (props) => {
 
     const publishChapter = (e) => {
         console.log('publish!');
-        helper.sendPost('/publishChapter', { chapterID: props._id, _csrf: props.csrf }, (response) => {
+        helper.sendPost('/publishChapter', { chapterID: props.chapter._id, novelID: props.chapter.novelID, published: true, _csrf: props.csrf }, (response) => {
             console.log(response);
+            if (response.error === 'novel not published') {
+                // ask user if they want to publish the novel
+            } else {
+                // the chapter was published
+
+            }
         });
     };
 
