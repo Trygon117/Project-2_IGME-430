@@ -1,25 +1,181 @@
+//If I ever get around to fixing this use this resource
+//https://javascript.info/selection-range#range
+
+
 const helper = require('./helper.js');
 
 let updateInterval;
+let initialLoad = true;
 
 // Create the chapter editor page
 const EditChapterWindow = (props) => {
     console.log(props);
 
-    const publishChapter = (e) => {
+    let ctrlDown = false;
 
+    const publishChapter = (e) => {
+        console.log('publish!');
+        helper.sendPost('/publishChapter', { chapterID: props._id, _csrf: props.csrf }, (response) => {
+            console.log(response);
+        });
     };
 
     const previewChapter = (e) => {
-
+        console.log('preview!');
     };
 
+    // overide keyboard shortcuts
+    const interceptKeyDown = (e) => {
+        //e.preventDefault();
+        //console.log(`${e.key} down`);
+
+        switch (e.key) {
+            case 'Control':
+                ctrlDown = true;
+                break;
+            case 'b':
+                if (ctrlDown) {
+                    e.preventDefault();
+                    // bold text
+                    console.log('bold');
+                    setBold();
+                }
+                break;
+            case 'i':
+                if (ctrlDown) {
+                    e.preventDefault();
+                    // itallicize text
+                    setItalic();
+                }
+                break;
+            case 'u':
+                if (ctrlDown) {
+                    e.preventDefault();
+                    // underline text
+                    setUnderline();
+                }
+                break;
+            default:
+                break;
+        }
+    };
+
+    const interceptKeyUp = (e) => {
+        //e.preventDefault();
+        //console.log(`${e.key} up`);
+
+        switch (e.key) {
+            case 'Control':
+                ctrlDown = false;
+                break;
+            default:
+                //updateChapterContent();
+                break;
+        }
+    }
+
     const updateChapterContent = (e) => {
+        if (initialLoad) return;
+
+        console.log('updating...');
+
         const editableDocument = document.getElementById('editable-chapter-content');
         const savedSpan = document.getElementById('saved-span');
         savedSpan.innerHTML = 'Unsaved';
         savedSpan.classList.remove('is-success');
         savedSpan.classList.add('is-warning');
+
+        // if this is the first thing being typed, then we need to add the correct styling
+        if (editableDocument.innerText.length <= 1) {
+            const fontDrop = document.getElementById('font-drop-text');
+            const textSizeInput = document.getElementById('text-size');
+
+            const defaultSpan = document.createElement('span');
+            defaultSpan.classList.add(`${fontDrop.getAttribute('data-font')}-font-span`);
+            defaultSpan.classList.add(`font-size-${textSizeInput.value}-span`);
+            // defaultSpan.className = 'default-font-span font-size-default-span';
+            defaultSpan.innerText = editableDocument.innerText;
+            editableDocument.innerHTML = "";
+            editableDocument.appendChild(defaultSpan);
+
+            // set the typing position to the end of the div
+            const range = document.createRange();
+            const selection = window.getSelection();
+
+            range.setStart(defaultSpan, editableDocument.innerText.length);
+            range.collapse(true);
+
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        // clear all invisible characters
+        //editableDocument.innerText = editableDocument.innerText.replace('&#8203', '');
+
+        const checkAllChildren = (thisNode) => {
+            if (thisNode.hasChildNodes()) {
+                thisNode.childNodes.forEach(node => {
+                    checkAllChildren(node);
+                });
+            } else {
+                if (thisNode.textContent) {
+                    // if it contains a no-space element
+                    if (thisNode.textContent.indexOf('\u200B') != -1 ? true : false) {
+                        // if this is the node we are currently in
+
+                        // check where we clicked and set the button classes to set wether they should be activated
+                        const selection = window.getSelection();
+
+                        // make sure that something is selected
+                        if (selection.rangeCount <= 0) {
+                            // if nothing is selected then just replace it
+                            thisNode.textContent = thisNode.textContent.replace('\u200B', '');
+                            return;
+                        }
+
+                        // console.log(selection);
+                        const range = selection.getRangeAt(0);
+
+                        let rangePosition;
+                        // is just a point
+                        if (range.startOffset === range.endOffset) {
+                            rangePosition = range.startOffset;
+                        }
+
+                        const commonAncestor = range.commonAncestorContainer;
+
+                        // the common ancestor element
+                        let commonElement = commonAncestor.parentElement;
+
+                        // delete the node
+                        thisNode.textContent = thisNode.textContent.replace('\u200B', '');
+
+                        // if the selection's parent element is the same as the node's parent element
+                        if (commonElement.isEqualNode(thisNode.parentElement)) {
+
+                            // set the typing position to the where it previously was
+                            const newRange = document.createRange();
+                            const selection = window.getSelection();
+
+                            if (rangePosition && rangePosition > 0) {
+                                newRange.setStart(thisNode, rangePosition - 1);
+                            } else {
+                                newRange.setStart(thisNode, thisNode.textContent.length);
+                            }
+
+                            newRange.collapse(true);
+
+                            selection.removeAllRanges();
+                            selection.addRange(newRange);
+                        }
+                    }
+                }
+            }
+        }
+
+        checkAllChildren(editableDocument);
+
+        //console.log(editableDocument);
 
         if (updateInterval) {
             clearInterval(updateInterval);
@@ -49,6 +205,81 @@ const EditChapterWindow = (props) => {
         }, 1000);
     };
 
+    const clickChapterContent = (e) => {
+        //console.log('clicked');
+        // check where we clicked and set the button classes to set wether they should be activated
+        const selection = window.getSelection();
+
+        // make sure that something is selected
+        if (selection.rangeCount <= 0) {
+            return false;
+        }
+        // console.log(selection);
+        const range = selection.getRangeAt(0);
+
+        //console.log(range);
+
+        //console.log(range.startOffset);
+        //console.log(range.endOffset);
+
+        // let rangePosition;
+        // // is just a point
+        // if (range.startOffset === range.endOffset) {
+        //     rangePosition = range.startOffset;
+        // }
+
+        const commonAncestor = range.commonAncestorContainer;
+
+        // the common ancestor element
+        let commonElement = commonAncestor.parentElement;
+        //console.log(commonElement);
+
+        // make sure that this function isn't called on any elements other than ones it is intended to
+        if (!helper.isDescendent(document.getElementById('textDiv'), commonElement) && !commonElement.isEqualNode(document.getElementById('textDiv'))) {
+            return false;
+        } else if (commonElement.isEqualNode(document.getElementById('saved-span'))) {
+            return false;
+        }
+
+        const selectedContents = range.cloneContents();
+
+        //const extractContents = range.extractContents();
+
+        //console.log(extractContents.childNodes.length);
+
+        // if we haven't actually selected anything
+        if (selectedContents.childNodes.length === 0) {
+            const boldButton = document.getElementById('bold-button');
+            const italicButton = document.getElementById('italic-button');
+            const underlineButton = document.getElementById('underline-button');
+
+            // update the style buttons depending on the style
+            if (commonElement.classList.contains('bold-span')) {
+                boldButton.classList.remove('is-outlined');
+                boldButton.classList.add('is-dark');
+            } else {
+                boldButton.classList.add('is-outlined');
+                boldButton.classList.remove('is-dark');
+            }
+            if (commonElement.classList.contains('italic-span')) {
+                italicButton.classList.remove('is-outlined');
+                italicButton.classList.add('is-dark');
+            } else {
+                italicButton.classList.add('is-outlined');
+                italicButton.classList.remove('is-dark');
+            }
+            if (commonElement.classList.contains('underline-span')) {
+                underlineButton.classList.remove('is-outlined');
+                underlineButton.classList.add('is-dark');
+            } else {
+                underlineButton.classList.add('is-outlined');
+                underlineButton.classList.remove('is-dark');
+            }
+
+
+        }
+    };
+
     const updateChapterTitle = async (e) => {
         const chapterTitle = document.getElementById('title-div');
 
@@ -59,358 +290,33 @@ const EditChapterWindow = (props) => {
         });
     };
 
-    // code derrived from:
-    // https://stackoverflow.com/questions/63364212/bold-unbold-selected-text-using-window-getselection
-    const setBold = async (e) => {
-        e.currentTarget.classList.toggle('is-outlined');
-        e.currentTarget.classList.toggle('is-dark');
-
-        //const initialContent = document.getElementById('editable-chapter-content').cloneNode(true);
-
-        const selection = await window.getSelection();
-        const range = selection.getRangeAt(0);
-        const parentString = range.commonAncestorContainer.parentElement.innerText;
-
-        const selectedText = range.extractContents(); // gets a copy of the text and removes it from html (destructive)
-
-        // console.log('selection');
-        // console.log(selection);
-        console.log('range:');
-        console.log(range);
-
-        // console.log('start container');
-        // console.log(range.startContainer);
-
-        // console.log('end container');
-        // console.log(range.endContainer);
-
-        // console.log('selected text');
-        // console.log(selectedText);
-
-        // console.log('html in range');
-        // console.log(selectedText.childNodes);
-
-        // console.log('common ancestor');
-        // console.log(range.commonAncestorContainer.parentElement);
-
-        // console.log('parentString');
-        // console.log(parentString);
-
-
-        // the common ancestor's element
-        const commonElement = range.commonAncestorContainer.parentElement;
-
-        // create an array of nodes in the range that contain tags
-        const selectedNodes = [];
-
-        selectedText.childNodes.forEach(node => {
-            if (node.tagName) {
-                console.log('adding node');
-                selectedNodes.push(node);
-            }
-        });
-        console.log('selected Nodes');
-        console.log(selectedNodes);
-
-        // if the commonAncestor element is a span
-        if (commonElement.tagName === 'SPAN') {
-            // if the commonAncestor is already a bold span
-            if (commonElement.classList.contains('bold-span')) {
-                // there is a selected element (Meaning we are crossin through a span)
-                if (selectedNodes.length !== 0) {
-                    console.log('In span that is a bold span, and crossing at least one other span');
-                    // unbold the text in the span, but make sure that you dont mess up the other span
-
-                    // copy it to be safe
-                    const selectNodes = Array.from(selectedText.childNodes);
-                    console.log('select nodes');
-                    console.log(selectNodes);
-
-                    // add the extracted text back so I can get all of the elements in one array
-                    range.insertNode(selectedText);
-
-                    // make a copy so it wont disappear when we delete the parent element
-                    const childNodes = Array.from(range.startContainer.childNodes);
-                    console.log('child nodes');
-                    console.log(childNodes);
-
-                    // delete the parent span
-                    commonElement.remove();
-
-                    const firstHalfNodesToAdd = [];
-
-                    const selectNodesToAdd = [];
-
-                    const secondHalfNodesToAdd = [];
-
-                    // iterate through all of the child nodes
-                    for (let i = 0; i < childNodes.length; i++) {
-                        let goNext = false;
-
-                        // iterate through the selected child nodes
-                        for (let k = 0; k < selectNodes.length; k++) {
-                            // if the node is a selected node
-                            if (childNodes[i].isEqualNode(selectNodes[k])) {
-                                selectNodesToAdd.unshift(selectNodes[k]);
-                                goNext = true;
-                            }
-                        }
-
-                        if (goNext) continue;
-
-
-                        // if the select nodes has any items
-                        if (selectNodesToAdd.length === 0) {
-                            // add to first half
-                            if (childNodes[i].tagName === 'SPAN') {
-                                console.log(childNodes[i]);
-                                // make a new span node with the correct classes
-                                const newSpan = document.createElement('span');
-                                newSpan.classList.add(childNodes[i].classList);
-                                newSpan.innerText = childNodes[i].innerHTML;
-                                firstHalfNodesToAdd.push(newSpan);
-                            } else {
-                                // make a new unstyalized span
-                                const newText = document.createTextNode(childNodes[i].textContent);
-                                firstHalfNodesToAdd.push(newText);
-                            }
-                        } else {
-                            // add to second half
-                            if (childNodes[i].tagName === 'SPAN') {
-                                console.log(childNodes[i]);
-                                // make a new span node with the correct classes
-                                const newSpan = document.createElement('span');
-                                newSpan.classList.add(childNodes[i].classList);
-                                newSpan.innerText = childNodes[i].innerHTML;
-                                secondHalfNodesToAdd.push(newSpan);
-                            } else {
-                                // make a new unstyalized span
-                                const newText = document.createTextNode(childNodes[i].textContent);
-                                secondHalfNodesToAdd.push(newText);
-                            }
-                        }
-                    }
-
-                    const firstHalfSpan = document.createElement('span');
-                    firstHalfSpan.classList.add('bold-span');
-                    firstHalfNodesToAdd.forEach(node => {
-                        firstHalfSpan.appendChild(node);
-                    });
-
-
-
-                    const secondHalfSpan = document.createElement('span');
-                    secondHalfSpan.classList.add('bold-span');
-                    secondHalfNodesToAdd.forEach(node => {
-                        secondHalfSpan.appendChild(node);
-                    });
-
-
-
-                    range.insertNode(secondHalfSpan);
-
-                    selectNodesToAdd.forEach(node => {
-                        console.log('inserting node!');
-                        console.log(node);
-                        range.insertNode(node);
-                    });
-
-                    range.insertNode(firstHalfSpan);
-
-
-                } else {
-                    console.log('In span that is a bold span, and not crossing another span');
-                    // unbold the text in the span, but make sure that the rest of the text in the span stays bold
-
-                    // get and delete the bold span
-                    const commonElementHalves = parentString.split(selectedText.textContent);
-                    console.log(commonElementHalves);
-
-                    commonElement.remove();
-                    // make a new bold span with the first half of the span's content
-                    const firstHalf = document.createElement('span');
-                    firstHalf.classList.add('bold-span');
-                    firstHalf.innerText = commonElementHalves[0];
-
-                    console.log(firstHalf.innerText);
-
-                    // make a text node with the unbolded text
-                    const newText = document.createTextNode(selectedText.textContent);  // create a new text node 
-
-                    console.log(selectedText.textContent);
-
-                    // make another new bold span with the second half of the span's content
-                    const secondHalf = document.createElement('span');
-                    secondHalf.classList.add('bold-span');
-                    secondHalf.innerText = commonElementHalves[1];
-
-                    console.log(secondHalf.innerText);
-
-
-                    range.insertNode(secondHalf);                                          // replace the destroyed text with this new span
-                    range.insertNode(newText);                                          // replace the destroyed text with this new span
-                    range.insertNode(firstHalf);                                          // replace the destroyed text with this new span
-
-                }
-
-            } else {
-                // there is a selected element (Meaning we are crossin through a span)
-                if (selectedNodes.length !== 0) {
-                    console.log('In span, but not in bold span, and crossing at least 1 other span');
-                    // make new spans to keep the other spans over the text it is attatched to
-
-                    const nodesToAdd = [];
-
-                    selectedText.childNodes.forEach(node => {
-                        let newNode;
-                        // make a new node
-                        if (node.tagName === 'SPAN') {
-                            // make a new span node with the correct class
-                            const newSpan = document.createElement('span');
-                            newSpan.classList.add(node.classList);
-                            newSpan.innerText = node.innerHTML;
-                            newNode = newSpan;
-                        } else {
-                            // make a new unstyalized span
-                            const newSpan = document.createElement('span');
-                            newSpan.innerText = node.textContent;
-                            newNode = newSpan;
-                        }
-
-                        nodesToAdd.unshift(newNode);
-                    });
-
-                    nodesToAdd.forEach(node => {
-                        node.classList.add('bold-span');
-                        range.insertNode(node);
-                    });
-
-                } else {
-                    console.log('In span, but not in bold span, and not crossing another span');
-                    // add a bold span inside of the parent span
-                    const newSpan = document.createElement('span'); // create a new span
-                    newSpan.classList = 'bold-span';                // make the span a bold span
-                    newSpan.innerText = selectedText.textContent;   // set the inner text of the new span- this removes the <span> tags 
-                    range.insertNode(newSpan);                      // replace the destroyed text with this new span
-                }
-            }
-
-        } else {
-
-            // there is a selected element (Meaning we are crossin through a span)
-            if (selectedNodes.length !== 0) {
-                console.log('parent is not span, but crossing through span');
-                // unbold the text but make sure that all the other spans remain consistent
-
-
-            } else {
-                console.log('parent is not span, and not crossing another span');
-                // make the text bold
-                const newSpan = document.createElement('span'); // create a new span
-                newSpan.classList = 'bold-span';                // make the span a bold span
-                newSpan.innerText = selectedText.textContent;   // set the inner text of the new span- this removes the <span> tags 
-                range.insertNode(newSpan);                      // replace the destroyed text with this new span
-            }
-        }
-
-        console.log(document.getElementById('editable-chapter-content'));
-
-    };
-
-    const setItalic = (e) => {
-        e.currentTarget.classList.toggle('is-outlined');
-        e.currentTarget.classList.toggle('is-dark');
-
-        const selection = window.getSelection();
-
-        const range = selection.getRangeAt(0);
-
-        let selectedParent = range.commonAncestorContainer.parentElement;
-
-        let mainParent = selectedParent;
-        // if this text is all already bold
-        if (selectedParent.classList.contains("italic-span")) {
-            var text = document.createTextNode(selectedParent.textContent);
-            mainParent = selectedParent.parentElement;
-            mainParent.insertBefore(text, selectedParent);
-            mainParent.removeChild(selectedParent);
-            mainParent.normalize();
-        }
-        else {
-            // there is hidden html in the selected text
-            if (selectedParent.innerHTML !== selectedParent.innerText) {
-
-            }
-            const span = document.createElement("span");
-            span.classList.toggle("italic-span");
-            // take out the contents, and add it to the span
-            span.appendChild(range.extractContents());
-            //selection.surroundContents(span);
-            // add in the add the new span back
-            range.insertNode(span);
-            mainParent.normalize();
-        }
-
-        if (window.getSelection) {
-            if (window.getSelection().empty) {  // Chrome
-                window.getSelection().empty();
-            } else if (window.getSelection().removeAllRanges) {  // Firefox
-                window.getSelection().removeAllRanges();
-            }
-        } else if (document.range) {  // IE?
-            document.range.empty();
+    const setBold = async () => {
+
+        if (setInlineSpanClass('bold-span')) {
+            console.log('updating');
+            updateChapterContent();
         }
     };
 
-    const setUnderline = (e) => {
-        e.currentTarget.classList.toggle('is-outlined');
-        e.currentTarget.classList.toggle('is-dark');
+    const setItalic = () => {
 
-        const selection = window.getSelection();
-
-        const range = selection.getRangeAt(0);
-
-        let selectedParent = range.commonAncestorContainer.parentElement;
-
-        let mainParent = selectedParent;
-        // if this text is all already bold
-        if (selectedParent.classList.contains("underline-span")) {
-            var text = document.createTextNode(selectedParent.textContent);
-            mainParent = selectedParent.parentElement;
-            mainParent.insertBefore(text, selectedParent);
-            mainParent.removeChild(selectedParent);
-            mainParent.normalize();
+        if (setInlineSpanClass('italic-span')) {
+            updateChapterContent();
         }
-        else {
-            // there is hidden html in the selected text
-            if (selectedParent.innerHTML !== selectedParent.innerText) {
+    };
 
-            }
-            const span = document.createElement("span");
-            span.classList.toggle("underline-span");
-            // take out the contents, and add it to the span
-            span.appendChild(range.extractContents());
-            //selection.surroundContents(span);
-            // add in the add the new span back
-            range.insertNode(span);
-            mainParent.normalize();
-        }
+    const setUnderline = () => {
 
-        if (window.getSelection) {
-            if (window.getSelection().empty) {  // Chrome
-                window.getSelection().empty();
-            } else if (window.getSelection().removeAllRanges) {  // Firefox
-                window.getSelection().removeAllRanges();
-            }
-        } else if (document.range) {  // IE?
-            document.range.empty();
+        if (setInlineSpanClass('underline-span')) {
+            updateChapterContent();
         }
     };
 
     const setFont = (e) => {
         const dropText = document.getElementById('font-drop-text');
         dropText.innerHTML = e.currentTarget.innerHTML;
-        dropText.style.fontFamily = e.currentTarget.getAttribute('data-font');
+        dropText.className = `${e.currentTarget.getAttribute('data-font')}-font-span`;
+        dropText.setAttribute('data-font', e.currentTarget.getAttribute('data-font'));
     };
 
     const increaseTextSize = (e) => {
@@ -418,8 +324,8 @@ const EditChapterWindow = (props) => {
         let newVal = parseInt(textInput.value) + 1;
         if (newVal <= 0) {
             newVal = 1;
-        } else if (newVal >= 200) {
-            newVal = 200;
+        } else if (newVal >= 100) {
+            newVal = 100;
         }
         textInput.value = newVal;
     };
@@ -429,8 +335,8 @@ const EditChapterWindow = (props) => {
         let newVal = parseInt(textInput.value) - 1;
         if (newVal <= 0) {
             newVal = 1;
-        } else if (newVal >= 200) {
-            newVal = 200;
+        } else if (newVal >= 100) {
+            newVal = 100;
         }
         textInput.value = newVal;
     };
@@ -440,8 +346,8 @@ const EditChapterWindow = (props) => {
         let newVal = parseInt(textInput.value);
         if (newVal <= 0) {
             newVal = 1;
-        } else if (newVal >= 200) {
-            newVal = 200;
+        } else if (newVal >= 100) {
+            newVal = 100;
         }
         textInput.value = newVal;
     };
@@ -491,6 +397,393 @@ const EditChapterWindow = (props) => {
         rightAlignButton.classList.remove('is-outlined');
     }
 
+    const setInlineSpanClass = (spanClass) => {
+        // console.log('starting styling');
+        // console.log(document.getElementById('editable-chapter-content').cloneNode(true));
+        const selection = window.getSelection();
+
+        // make sure that something is selected
+        if (selection.rangeCount <= 0) {
+            return false;
+        }
+
+        // console.log(selection);
+        const range = selection.getRangeAt(0);
+
+        // console.log('range');
+        // console.log(range);
+
+        const commonAncestor = range.commonAncestorContainer;
+
+        // the common ancestor element
+        let commonElement = commonAncestor.parentElement;
+        let clonedCommonElement = commonElement.cloneNode(true);
+
+        // console.log('commonElement');
+        // console.log(commonElement.cloneNode(true));
+        // console.log(commonElement);
+
+        // make sure that this function isn't called on any elements other than ones it is intended to
+        if (!helper.isDescendent(document.getElementById('textDiv'), commonElement) && !commonElement.isEqualNode(document.getElementById('textDiv'))) {
+            return false;
+        } else if (commonElement.isEqualNode(document.getElementById('saved-span'))) {
+            return false;
+        }
+
+        let parentSpanClass = commonElement.classList;
+        // console.log('parentSpanClass');
+        // console.log(parentSpanClass);
+
+        // gets a copy of the selected text and removes it from html (destructive)
+        const extractedContent = range.extractContents();
+        // console.log('extractedContent');
+        // console.log(extractedContent.cloneNode(true));
+        // console.log(extractedContent.cloneNode(true).childNodes);
+
+        // if we didnt select anything
+        if (extractedContent.childNodes.length === 0) {
+            console.log('no children');
+            // if the common element has the spanClass
+            if (commonElement.classList.contains(spanClass)) {
+                // do nothing
+            } else {
+                // insert a spanClass span that we are currently typing in
+                const newSpan = document.createElement('span');
+                newSpan.className = spanClass;
+
+                // add an invisible character because there is a glitch where you cant 
+                //set the carrot to the inside of an empty element
+                newSpan.innerHTML = '&#8203';
+
+                console.log(newSpan);
+
+                range.insertNode(newSpan);
+
+                // set the typing position to the end of the newSpan
+                const newRange = document.createRange();
+
+                newRange.setStart(newSpan, 1);
+                newRange.collapse(true);
+
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+
+                return;
+            }
+        }
+
+        // copy an array of the nodes that we selected
+        const selectNodes = Array.from(extractedContent.childNodes);
+        // console.log('selectNodes');
+        // console.log(selectNodes);
+
+        // add the extracted text back so we can get an array with everything in it (including the selected nodes)
+        range.insertNode(extractedContent);
+
+        let childNodes;
+        let parentIsSpan = false;
+
+        // figure out what we need to remove
+        if (commonElement.tagName === 'SPAN') {
+            parentIsSpan = true;
+
+            // copy an array of all the values in the document (includes what we extracted)
+            childNodes = Array.from(commonElement.childNodes);
+
+            // delete the parent element
+            commonElement.remove();
+        } else {
+
+            commonElement = document.getElementById('editable-chapter-content');
+            clonedCommonElement = commonElement.cloneNode(true);
+
+            // copy an array of all the nodes in the parent element (includes what we extracted)
+            childNodes = Array.from(commonElement.childNodes);
+
+            // delete the contents of the parent element
+            commonElement.innerHTML = "";
+        }
+
+        // console.log('childNodes');
+        // console.log(childNodes);
+
+        // Array of nodes to insert at the end
+        const nodesToAdd = [];
+
+        // sort the nodes into an object of arrays
+        const sortedNodes = sortNodes(childNodes, selectNodes);
+
+        // console.log('sortedNodes');
+        // console.log(sortedNodes);
+
+        // add the first node
+        sortedNodes.firstNodesToAdd.forEach(node => {
+            let thisNode = node;
+
+            if (parentIsSpan) {
+                // add spanClass
+                if (node.nodeType === 3) { // is textNode
+                    thisNode = document.createElement('span');
+                    thisNode.classList = parentSpanClass;
+                    thisNode.innerText = node.textContent;
+                } else if (node.tagName === 'SPAN') {
+                    parentSpanClass.forEach(parentSpan => {
+                        thisNode.classList.add(parentSpan);
+                    })
+                } else {
+                    console.log('firstNodeToAdd had unhandled nodeType');
+                }
+            }
+
+            nodesToAdd.unshift(thisNode);
+        });
+
+        // check if every child of the parent element had the spanClass
+        let allChildrenHaveSpanClass = false;
+
+        // console.log('common child nodes');
+        // console.log(commonElement.cloneNode(true).childNodes);
+
+        // console.log('cloned common child nodes');
+        // console.log(clonedCommonElement.childNodes);
+
+        for (const child of clonedCommonElement.childNodes) {
+            console.log(child);
+            if (child.nodeType === 1) { // is an element
+                if (child.classList.contains(spanClass)) {
+                    allChildrenHaveSpanClass = true;
+                } else {
+                    allChildrenHaveSpanClass = false;
+                    break;
+                }
+            } else { // if it isn't an element then it can't have the span class
+                allChildrenHaveSpanClass = false;
+                break;
+            }
+        }
+
+        // add the selected nodes
+        sortedNodes.selectNodesToAdd.forEach(node => {
+            let thisNode = node;
+
+            // if the parent element has the spanClass, or if all of the children of the parent element do
+            if (clonedCommonElement.classList.contains(spanClass) || allChildrenHaveSpanClass) {
+                // remove it, but maintain other classes
+                if (node.nodeType === 3) { // is textNode
+                    thisNode = document.createElement('span');
+                    thisNode.classList = parentSpanClass;
+                    thisNode.classList.remove(spanClass);
+                    thisNode.innerHTML = node.textContent;
+                } else if (node.tagName === 'SPAN') {
+                    thisNode.classList.remove(spanClass);
+                }
+            } else {
+                // add the spanClass
+                if (node.nodeType === 3) { // is textNode
+                    thisNode = document.createElement('span');
+                    thisNode.classList = parentSpanClass;
+                    thisNode.classList.add(spanClass);
+                    thisNode.innerHTML = node.textContent;
+                } else if (node.tagName === 'SPAN') {
+                    thisNode.classList.add(spanClass);
+                }
+            }
+
+            nodesToAdd.unshift(thisNode);
+        });
+
+
+        // add the last node
+        sortedNodes.lastNodesToAdd.forEach(node => {
+            let thisNode = node;
+
+            if (parentIsSpan) {
+                // add spanClass
+                if (node.nodeType === 3) { // is textNode
+                    thisNode = document.createElement('span');
+                    thisNode.classList = parentSpanClass;
+                    thisNode.innerText = node.textContent;
+                } else if (node.tagName === 'SPAN') {
+                    parentSpanClass.forEach(parentSpan => {
+                        thisNode.classList.add(parentSpan);
+                    })
+                } else {
+                    console.log('lastNodeToAdd had unhandled nodeType');
+                }
+            }
+
+            nodesToAdd.unshift(thisNode);
+        });
+
+        // make it so that nothing is highlighted after
+        if (window.getSelection) {
+            if (window.getSelection().empty) {  // Chrome
+                window.getSelection().empty();
+            } else if (window.getSelection().removeAllRanges) {  // Firefox
+                window.getSelection().removeAllRanges();
+            }
+        } else if (document.selection) {  // IE?
+            document.selection.empty();
+        }
+
+        let thisDoc = document.getElementById('editable-chapter-content');
+
+        // insert all the nodes that need to be inserted
+        nodesToAdd.forEach(node => {
+            range.insertNode(node);
+        });
+
+        const currentSpans = thisDoc.querySelectorAll('span');
+        let removeSpans = [];
+
+        // get all empty spans
+        currentSpans.forEach(span => {
+            if (span.innerText === '') {
+                removeSpans.push(span);
+            }
+        });
+
+        // remove all empty spans
+        removeSpans.forEach(span => {
+            span.remove();
+        });
+
+        //  combine spans that are the same and next to eachother
+        const cleanedSpans = cleanUpSpans(thisDoc);
+        thisDoc.before(cleanedSpans);
+        thisDoc.remove();
+        thisDoc = document.getElementById('editable-chapter-content');
+
+        // combine text nodes that are next to eachother
+        const cleanedTextNodes = cleanUpTextNodes(thisDoc);
+        thisDoc.before(cleanedTextNodes);
+        thisDoc.remove();
+        thisDoc = document.getElementById('editable-chapter-content');
+
+        console.log(thisDoc);
+        console.log(thisDoc.cloneNode(true));
+
+        // add the event listeners back
+        addEditableContainerEventListeners(thisDoc);
+
+        // console.log('finished styling');
+        // console.log(document.getElementById('editable-chapter-content').cloneNode(true));
+
+        return true;
+    };
+
+    // helper function to sort nodes
+    const sortNodes = (childNodes, selectNodes) => {
+        // we need to sort the nodes to add them back in the right order
+        const firstNodesToAdd = [];
+        const selectNodesToAdd = [];
+        const lastNodesToAdd = [];
+
+        childNodes.forEach(childNode => {
+            let isSelectedNode = false;
+
+            // iterate through the selected nodes and check if the current child node is a selected node
+            selectNodes.forEach(selectNode => {
+                // if the node is a selected node sort it
+                if (childNode.isEqualNode(selectNode)) {
+                    selectNodesToAdd.push(selectNode);
+                    //console.log('select node: ');
+                    //console.log(selectNode);
+                    isSelectedNode = true;
+                }
+            });
+
+            // if the current node isn't a selected node
+            if (!isSelectedNode) {
+
+                // if we have already sorted a selected node
+                if (selectNodesToAdd.length === 0) {
+
+                    // add to first half
+                    firstNodesToAdd.push(childNode);
+
+                } else { // haven't sorted a selected node
+
+                    // add to second half
+                    lastNodesToAdd.push(childNode);
+                }
+            }
+        });
+
+        return { firstNodesToAdd, selectNodesToAdd, lastNodesToAdd }
+    }
+
+    // helper function to combine spans that are next to eachother
+    const cleanUpSpans = (doc) => {
+        let newDoc = doc.cloneNode(true);
+
+        for (const span of newDoc.querySelectorAll('span')) {
+            if (span.nextElementSibling === span.nextSibling && span.nextSibling !== null) {
+                // the span has an element to its right
+
+                if (span.nextSibling.tagName === 'SPAN') {
+                    // the element is a span
+
+                    // if the span doesn't have a class then delete it
+                    if (span.classList.length === 0) {
+                        const newTextNode = document.createTextNode(span.innerText);
+                        span.before(newTextNode);
+                        span.remove();
+
+                        newDoc = cleanUpSpans(newDoc);
+                        break;
+                    }
+
+                    // if the class name is the same as the element next to it, then combine them
+                    if (span.className === span.nextSibling.className) {
+                        //combine these spans
+                        let newSpan = document.createElement('span');
+                        newSpan.classList = span.classList;
+                        newSpan.innerText = span.innerText + span.nextSibling.innerText;
+
+                        span.before(newSpan);
+                        span.nextElementSibling.remove();
+                        span.remove();
+
+                        newDoc = cleanUpSpans(newDoc);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return newDoc;
+    };
+
+    const cleanUpTextNodes = (doc) => {
+        let newDoc = doc.cloneNode(true);
+
+        for (const node of newDoc.childNodes) {
+            if (node.nodeType == 3 && node.nextSibling && node.nextSibling.nodeType === 3) {
+                // this node is a textNode, and the next node is a textNode
+
+                //combine these nodes
+                let newTextNode = document.createTextNode(node.textContent + node.nextSibling.textContent);
+
+                node.before(newTextNode);
+                node.nextSibling.remove();
+                node.remove();
+
+                newDoc = cleanUpSpans(newDoc);
+                break;
+            }
+        }
+
+        return newDoc
+    }
+
+    const addEditableContainerEventListeners = (doc) => {
+        doc.addEventListener('input', updateChapterContent);
+        doc.addEventListener('click', clickChapterContent);
+        doc.addEventListener('keyDown', interceptKeyDown);
+        doc.addEventListener('keyUp', interceptKeyUp);
+    };
+
     return (
         <div>
 
@@ -509,33 +802,36 @@ const EditChapterWindow = (props) => {
                 <div id='editor-controls' style={{ height: 40, width: '100vw', display: 'flex', flexFlow: 'row', justifyContent: 'center', gap: '15px', margin: '0px 10px 10px 10px' }}>
 
                     <span style={{ textAlign: 'center' }}>
-                        <a className='button is-outlined' onClick={setBold}><i className="fa-solid fa-bold" ></i></a>
+                        <a id='bold-button' className='button is-outlined' onClick={setBold}><i className="fa-solid fa-bold" ></i></a>
                     </span>
 
                     <span style={{ textAlign: 'center' }}>
-                        <a className='button is-outlined' onClick={setItalic}><i className="fa-solid fa-italic"></i></a>
+                        <a id='italic-button' className='button is-outlined' onClick={setItalic}><i className="fa-solid fa-italic"></i></a>
                     </span>
 
                     <span style={{ textAlign: 'center' }}>
-                        <a className='button is-outlined' onClick={setUnderline}><i className="fa-solid fa-underline"></i></a>
+                        <a id='underline-button' className='button is-outlined' onClick={setUnderline}><i className="fa-solid fa-underline"></i></a>
                     </span>
 
                     <span className='dropdown' onClick={(e) => { e.currentTarget.classList.toggle('is-active') }}>
                         <div className="dropdown-trigger">
                             <button className="button" aria-haspopup="true" aria-controls="dropdown-menu">
-                                <span id='font-drop-text' style={{ width: '120px', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis' }}>Selected Font</span>
+                                <span id='font-drop-text' className='georgia-font-span' data-font='georgia' style={{ width: '120px', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis' }}>Georgia</span>
                                 <span className="icon is-small">
                                     <i className="fas fa-angle-down" aria-hidden="true"></i>
                                 </span>
                             </button>
                         </div>
-                        <div className='dropdown-menu' id='dropdown-menu' role={'menu'}>
+                        <div id='dropdown-menu' className='dropdown-menu' role={'menu'}>
                             <div className="dropdown-content">
-                                <a className="dropdown-item" style={{ fontFamily: 'Georgia' }} data-font='Georgia' onClick={setFont}>
+                                <a className="dropdown-item georgia-font-span" data-font='georgia' onClick={setFont}>
                                     Georgia
                                 </a>
-                                <a className="dropdown-item" style={{ fontFamily: 'Times New Roman' }} data-font='Times New Roman' onClick={setFont}>
+                                <a className="dropdown-item times-new-roman-font-span" data-font='times-new-roman' onClick={setFont}>
                                     Times New Roman
+                                </a>
+                                <a className="dropdown-item arial-font-span" data-font='arial' onClick={setFont}>
+                                    Arial
                                 </a>
                             </div>
                         </div>
@@ -543,7 +839,7 @@ const EditChapterWindow = (props) => {
 
                     <span style={{ display: 'flex', border: 'ridge thin' }}>
                         <a className='button is-white' onClick={decreaseTextSize} style={{ height: '38px' }}><i className="fa-solid fa-minus" /></a>
-                        <input id="text-size" className='input' type="number" name="text-size" defaultValue='20' min="0" max="200" onBlur={updateTextSize} style={{ width: '70px', height: '38px' }} />
+                        <input id="text-size" className='input' type="number" name="text-size" defaultValue='20' min="0" max="100" onBlur={updateTextSize} style={{ width: '70px', height: '38px' }} />
                         <a className='button is-white' onClick={increaseTextSize} style={{ height: '38px' }}><i className="fa-solid fa-plus" /></a>
                     </span>
 
@@ -562,15 +858,15 @@ const EditChapterWindow = (props) => {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flexFlow: 'column', alignItems: 'center', justifyContent: 'center', width: '100vw', minHeight: '900px', marginBottom: '50px' }}>
+            <div id="text-root" style={{ display: 'flex', flexFlow: 'column', alignItems: 'center', justifyContent: 'center', width: '100vw', minHeight: '900px', marginBottom: '50px' }}>
 
-                <div style={{ width: '720px', margin: 0 }}>
+                <div id="title-div-container" style={{ width: '720px', margin: 0 }}>
                     <div id='title-div' className='title' contentEditable='true' style={{ marginTop: 20, marginBottom: 20, outline: '0px solid transparent' }} onSelect={(e) => { e.currentTarget.spellcheck = true }} onBlur={updateChapterTitle}></div>
                 </div>
 
                 <div id='textDiv' style={{ position: 'relative', display: 'block', width: '720px', minHeight: '900px', paddingBottom: '5px', borderWidth: 'thick', border: 'solid' }}>
                     <span id="saved-span" className='tag is-success' style={{ position: 'absolute', bottom: '5px', right: '10px' }}>Saved</span>
-                    <div id='editable-chapter-content' name='textArea' contentEditable='true' style={{ padding: '3%', outline: '0px solid transparent', width: '100%', height: '100%' }} onInput={updateChapterContent}></div>
+                    <div id='editable-chapter-content' name='textArea' contentEditable='true' style={{ padding: '3%', outline: '0px solid transparent', width: '100%', height: '100%' }} onInput={updateChapterContent} onClick={clickChapterContent} onKeyDown={interceptKeyDown} onKeyUp={interceptKeyUp}></div>
                 </div>
 
             </div>
@@ -584,7 +880,10 @@ const loadChapterInfo = (chapter) => {
     chapterTitle.innerHTML = chapter.title;
 
     const chapterContent = document.getElementById('editable-chapter-content');
+
     chapterContent.innerHTML = chapter.content;
+
+    initialLoad = false;
 };
 
 const init = async () => {
