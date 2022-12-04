@@ -240,21 +240,26 @@ const loadChapters = async (chapters) => {
     const chaptersTableBody = document.getElementById('chapters-table-body');
     const chaptersTable = document.getElementById('chapters-table');
 
-    const chapterRow = document.createElement('tr');
-    const chapterNumber = document.createElement('th');
-    const chapterTitle = document.createElement('td');
-    const chapterViews = document.createElement('td');
-    const chapterPublish = document.createElement('td');
-    const chapterDelete = document.createElement('td');
-
     chaptersTableBody.innerHTML = "";
 
+    console.log('load chapters');
     console.log(chapters);
 
     Object.keys(chapters).forEach(chapter => {
+        //console.log(`${chapter}`);
+        //console.log(chapters[chapter]);
+
+        // if this is a chapter and not a draft
         if (chapter.includes("chapter")) {
-            console.log(`chapter ${chapter}`);
-            console.log(chapters);
+            // console.log(`chapter ${chapter}`);
+            // console.log(chapters);
+
+            const chapterRow = document.createElement('tr');
+            const chapterNumber = document.createElement('th');
+            const chapterTitle = document.createElement('td');
+            const chapterViews = document.createElement('td');
+            const chapterPublish = document.createElement('td');
+            const chapterDelete = document.createElement('td');
 
             chapterRow.style.width = '100%';
             chapterRow.style.cursor = 'hand';
@@ -309,21 +314,20 @@ const loadDrafts = async (chapters) => {
     const chaptersTableBody = document.getElementById('chapters-table-body');
     const chaptersTable = document.getElementById('chapters-table');
 
-    const chapterRow = document.createElement('tr');
-    const chapterNumber = document.createElement('th');
-    const chapterTitle = document.createElement('td');
-    const chapterViews = document.createElement('td');
-    const chapterPublish = document.createElement('td');
-    const chapterDelete = document.createElement('td');
-
     chaptersTableBody.innerHTML = "";
 
 
     Object.keys(chapters).forEach(chapter => {
         if (chapter.includes("draft")) {
+            // console.log(`chapter ${chapter}`);
+            // console.log(chapters);
 
-            console.log(`chapter ${chapter}`);
-            console.log(chapters);
+            const chapterRow = document.createElement('tr');
+            const chapterNumber = document.createElement('th');
+            const chapterTitle = document.createElement('td');
+            const chapterViews = document.createElement('td');
+            const chapterPublish = document.createElement('td');
+            const chapterDelete = document.createElement('td');
 
             chapterRow.style.width = '100%';
             chapterRow.addEventListener('click', () => {
@@ -374,23 +378,32 @@ const loadDrafts = async (chapters) => {
 
 const getChapters = async (novel, _csrf, handler) => {
     console.log('get chapters');
-    console.log(novel);
+    //console.log(novel);
 
     if (novel.chapters) {
         const chapterIDs = novel.chapters;
+        console.log('chapterIDs');
         console.log(chapterIDs);
 
         const chapters = {};
 
-        Object.keys(chapterIDs).forEach((chapter) => {
-            helper.sendPost('/searchChapterByID', { chapterID: chapterIDs[chapter], _csrf }, (response) => {
-                console.log('response');
-                console.log(response);
-                chapters[chapter] = response.chapter;
+        for (let i = 0; i < Object.keys(chapterIDs).length; i++) {
+            const thisChapterID = Object.keys(chapterIDs)[i];
+            //console.log('thisChapterID');
+            //console.log(thisChapterID);
+
+            await helper.sendPost('/searchChapterByID', { chapterID: chapterIDs[thisChapterID], _csrf }, (response) => {
+                //console.log(`${thisChapterID} response`);
+                //console.log(response);
+                // check if the next index is out of bounds
+                chapters[thisChapterID] = response.chapter;
+                if (i + 1 >= Object.keys(chapterIDs).length) {
+                    handler(chapters);
+                    return chapters;
+                }
             });
-        });
-        handler(chapters);
-        return chapters;
+        }
+
     } else {
         handler({});
     }
@@ -419,6 +432,8 @@ const init = async () => {
             window.location.assign('/create');
         }
         await getChapters(novelData.novel, data.csrfToken, (chapters) => {
+            console.log('chapters');
+            console.log(chapters);
             ReactDOM.render(<EditNovelWindow csrf={data.csrfToken} novel={novelData.novel} chapters={chapters} />,
                 document.getElementById('edit-novel-content')
             );

@@ -123,10 +123,21 @@ const editNovel = async (req, res) => {
 
 };
 
+
+
+
+
+
 // delet the given novel
 const deleteNovel = (req, res) => {
   console.log('Delete Novel');
 };
+
+
+
+
+
+
 
 // Chapters
 
@@ -191,6 +202,11 @@ const createChapter = async (req, res) => {
   });
 };
 
+
+
+
+
+
 // publish or unpublish chapter
 const publishChapter = async (req, res) => {
   console.log('Publish Chapter');
@@ -207,6 +223,9 @@ const publishChapter = async (req, res) => {
 
   // check if the chapter exists
   await Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
+
+    console.log('thisChapter');
+    console.log(thisChapter);
 
     if (thisChapter.error) {
       return res.status(400).json({ error: thisChapter.error });
@@ -252,6 +271,8 @@ const publishChapter = async (req, res) => {
 
       const publish = async (referenceChapter) => {
         // update the chapter
+        console.log('updates');
+        console.log(updates);
         await Chapter.updateChapterByID(req, updates, async (chapterResponse) => {
           if (chapterResponse.error) {
             return res.status(400).json({ error: chapterResponse });
@@ -412,6 +433,61 @@ const publishChapter = async (req, res) => {
             console.log('insert-after');
             console.log(req.body.referenceChapter);
 
+            const chapsToIncrease = [];
+
+            if (referenceChapter) { // this is the other chapter
+
+              // update the novel
+              const chapters = novelResponse.chapters;
+
+              // delete the previous id
+              await chapters.delete(thisChapter.chapter);
+
+              // set this chapter to be increased
+              chapsToIncrease.unshift({ chapterID: thisChapter._id, chapter: newChapterName, chapterNumber: referenceChapter.chapterNumber });
+
+              // set this chapter as the reference chapter's chapter
+              //await chapters.set(`${newChapterName}`, thisChapter._id);
+
+              // set every chapter after this one as it's chapter + 1
+
+              // find all the chapters after this one
+              for (const [key, value] of chapters) {
+                let numString;
+                if (key.includes('draft-')) {
+                  continue;
+                } else if (key.includes('chapter-')) {
+                  numString = key.replace('chapter-', '');
+                }
+                const chapNum = parseInt(numString) + 1; //chapter numbers are one greater than the chapter value
+                console.log('chapNum');
+                console.log(chapNum);
+                // if the this chapter number is greater than the inserted chapter number
+                if (chapNum > chapterResponse.chapterNumber) {
+                  chapsToIncrease.unshift({ chapterID: value, chapter: key, chapterNumber: chapNum }); // so we don't mess up the the array as we go through it
+                }
+              }
+              console.log('chapsToIncrease');
+              console.log(chapsToIncrease);
+              // go through the chapters we found
+              for (const chap of chapsToIncrease) {
+                // console.log(chap);
+                // increase the position by 1
+                if (chap.chapter.includes('chapter-')) {
+                  //update this chapter
+                  const disChapUpdate = {};
+                  disChapUpdate.chapterID = chap.chapterID;
+                  disChapUpdate.chapter = `chapter-${chap.chapterNumber}`; // the chapter number will already be one greater than this
+                  disChapUpdate.chapterNumber = chap.chapterNumber + 1;
+                  displacedChapterUpdates.unshift(disChapUpdate);
+                  // displace this chapter by 1
+                  await chapters.set(`chapter-${chap.chapterNumber}`, chap.chapterID);
+                }
+              }
+
+              novelUpdates.chapters = chapters;
+            }
+
 
           } else if (req.body.mode === 'add-last') {
             // add as the last chapter
@@ -520,6 +596,13 @@ const publishChapter = async (req, res) => {
               // add after the given novel
 
               console.log('pre-insert-after');
+
+              newChapterName = referenceChapter.chapter;
+
+              // update the new novel
+              updates.chapterNumber = referenceChapter.chapterNumber;
+              updates.chapter = newChapterName;
+              updates.published = true;
             }
 
             publish(referenceChapter);

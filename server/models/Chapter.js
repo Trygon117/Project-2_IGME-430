@@ -164,6 +164,12 @@ const updateChapterByID = async (req, updates, handler) => {
       return;
     }
 
+    // console.log('OG chapter');
+    // console.log(chapter);
+
+    // console.log('updates');
+    // console.log(updates);
+
     Object.entries(updates).forEach(entry => {
       const [key, value] = entry;
       switch (key) {
@@ -181,6 +187,7 @@ const updateChapterByID = async (req, updates, handler) => {
           break;
         case "chapterNumber":
           chapter.chapterNumber = value;
+          break;
         case "content":
           chapter.content = value;
           break;
@@ -194,6 +201,9 @@ const updateChapterByID = async (req, updates, handler) => {
           break;
       }
     });
+
+    // console.log('chapter');
+    // console.log(chapter);
 
     result = await chapter.save();
     //console.log("updated");

@@ -408,10 +408,19 @@ const EditChapterWindow = (props) => {
     };
 
     const setFont = (e) => {
+        const newSpanClass = `${e.currentTarget.getAttribute('data-font')}-font-span`;
+
         const dropText = document.getElementById('font-drop-text');
         dropText.innerHTML = e.currentTarget.innerHTML;
         dropText.className = `${e.currentTarget.getAttribute('data-font')}-font-span`;
         dropText.setAttribute('data-font', e.currentTarget.getAttribute('data-font'));
+
+        console.log('font span class');
+        console.log(newSpanClass);
+
+        // if (setInlineSpanClass(newSpanClass)) {
+        //     updateChapterContent();
+        // }
     };
 
     const increaseTextSize = (e) => {
