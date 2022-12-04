@@ -18,7 +18,14 @@ const ChapterSchema = new mongoose.Schema({
     required: true,
   },
   chapter: {
+    type: String,
+    unique: false,
+    required: true,
+  },
+  chapterNumber: {
     type: Number,
+    default: -1, // meaning it is unpublished
+    required: false,
   },
   content: {
     type: String,
@@ -80,8 +87,52 @@ const searchByID = async (req, chapterID, handler) => {
       chapter = { published: false };
     }
 
-    handler({ chapter });
+    handler(chapter);
     return;
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    handler({ error: 'An error has occurred' });
+    return;
+  });
+};
+
+// find multiple chapters that meet the given filter requirements
+const searchByCriteria = async (req, chapterFilters, handler) => {
+  const sessionUsername = req.session.account.username;
+
+  await ChapterModel.find(chapterFilters, (err, docs) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    const chapters = {};
+
+    // hide information about novels the user isn't allowed to access
+    docs.forEach(chapter => {
+      if (!chapter.published && chapter.author != sessionUsername) {
+        chapters[chapter.title] = { published: false };
+      } else {
+        chapters[chapter.title] = chapter;
+      }
+    });
+
+    if (Object.keys(chapters).length === 0) {
+      console.log('No Chapters Found');
+      handler({ error: 'No Chapters Found' });
+      return;
+    }
+
+    // console.log("searchByCriteria (Novel.js)");
+    // console.log(novels);
+
+    console.log('found chapters');
+
+    handler(chapters);
+    return
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
@@ -113,10 +164,6 @@ const updateChapterByID = async (req, updates, handler) => {
       return;
     }
 
-    if (chapterResponse.error) {
-      return chapterResponse.error;
-    }
-
     Object.entries(updates).forEach(entry => {
       const [key, value] = entry;
       switch (key) {
@@ -132,6 +179,8 @@ const updateChapterByID = async (req, updates, handler) => {
         case "chapter":
           chapter.chapter = value;
           break;
+        case "chapterNumber":
+          chapter.chapterNumber = value;
         case "content":
           chapter.content = value;
           break;
@@ -163,5 +212,6 @@ const updateChapterByID = async (req, updates, handler) => {
 module.exports = {
   ChapterModel,
   searchByID,
+  searchByCriteria,
   updateChapterByID,
 };

@@ -72,6 +72,8 @@ NovelSchema.statics.toAPI = (doc) => ({
   coverMime: doc.coverMime,
   abstract: doc.abstract,
   chapters: doc.chapters,
+  publishedChapterCount: doc.publishedChapterCount,
+  totalChapterCount: doc.totalChapterCount,
   published: doc.published,
   publicationDate: doc.publicationDate,
   createdDate: doc.createdDate,
@@ -94,10 +96,7 @@ const searchByID = async (req, novelID, handler) => {
       return;
     }
 
-    console.log(doc);
-
     if (doc === null) {
-      console.log('doc is null');
       handler({ error: "No Novel Found" });
       return;
     }
@@ -109,10 +108,7 @@ const searchByID = async (req, novelID, handler) => {
       novel = { published: false };
     }
 
-    //console.log("searchByID (Novel.js)");
-    //console.log({ novel });
-
-    handler({ novel });
+    handler(novel);
     return;
   }).clone().catch((err) => {
     console.log('caught error');
@@ -145,11 +141,9 @@ const searchByCriteria = async (req, novelFilters, handler) => {
       }
     });
 
-    console.log(Object.keys(novels).length);
-
     if (Object.keys(novels).length === 0) {
-      console.log('No Novels Found.');
-      handler({ error: 'No Novels Found.' });
+      console.log('No Novels Found');
+      handler({ error: 'No Novels Found' });
       return;
     }
 
@@ -173,11 +167,16 @@ const searchByCriteria = async (req, novelFilters, handler) => {
 const updateNovelByID = async (req, updates, handler) => {
   const sessionUsername = req.session.account.username;
 
-  await NovelModel.findById(updates.novelID, async (err, novel) => {
+  await NovelModel.findById(req.body.novelID, async (err, novel) => {
     if (err) {
       console.log('an error');
       console.log(err);
       handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    if (!novel) {
+      handler({ error: `Novel with with id: "#${req.body.novelID}" not found` });
       return;
     }
 
@@ -211,6 +210,15 @@ const updateNovelByID = async (req, updates, handler) => {
         case "chapters":
           novel.chapters = value;
           break;
+        case 'publishedChapterCount':
+          novel.publishedChapterCount = value;
+          break;
+        case 'totalChapterCount':
+          novel.totalChapterCount = value;
+          break;
+        case "published":
+          novel.published = value;
+          break;
         case "publicationDate":
           novel.publicationDate = value;
           break;
@@ -219,9 +227,24 @@ const updateNovelByID = async (req, updates, handler) => {
       }
     });
 
+    // update chapter counts
+    let publishedChapters = 0;
+    let totalChapters = 0;
+
+    // count the chapters
+    for (const [key, value] of novel.chapters) {
+      if (key.includes('chapter-')) {
+        publishedChapters++;
+      }
+      totalChapters++;
+    }
+
+    novel.publishedChapterCount = publishedChapters;
+    novel.totalChapterCount = totalChapters;
+
     result = await novel.save();
 
-    handler({ result });
+    handler(result);
 
   }).clone().catch((err) => {
     console.log('caught error');

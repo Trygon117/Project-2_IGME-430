@@ -35,9 +35,7 @@ const sendMultipartPost = async (url, data, handler) => {
 
 const handleResponse = (result, data, handler) => {
     if (result.error) {
-        console.log(result.error);
-        console.log(result);
-        return;
+        console.log(`error: ${result.error}`);
     }
 
     if (result.redirect) {

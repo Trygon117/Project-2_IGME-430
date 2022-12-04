@@ -92,19 +92,25 @@ const loadMyNovels = async (csrf) => {
         document.getElementById('create-content')
     );
 
-    const gotNovels = (response) => {
-        console.log(response);
-        novels = response.novels;
-        novels.forEach(novel => {
-            const newCardID = novel.title.toLowerCase().replace(' ', '_');
-            const newCardDiv = document.createElement('div');
-            newCardDiv.id = newCardID;
-            document.getElementById('novel-cards').appendChild(newCardDiv);
-            //console.log(novel);
-            ReactDOM.render(<NovelCard csrf={csrf} novel={novel} />,
-                document.getElementById(newCardID)
-            );
-        });
+    helper.sendPost('/searchNovelsByUser', { user: myUsername, _csrf: csrf }, (response) => {
+        //console.log(response);
+        // if there was an error loading the novels
+        if (!response.error) {
+            console.log(response);
+            novels = response.novels;
+            console.log(novels);
+            Object.values(novels).forEach(novel => {
+                const newCardID = novel.title.toLowerCase().replace(' ', '_');
+                const newCardDiv = document.createElement('div');
+                newCardDiv.id = newCardID;
+                document.getElementById('novel-cards').appendChild(newCardDiv);
+                //console.log(novel);
+                ReactDOM.render(<NovelCard csrf={csrf} novel={novel} />,
+                    document.getElementById(newCardID)
+                );
+            });
+        }
+
         const newCardID = 'empty-card';
         const newCardDiv = document.createElement('div');
         newCardDiv.id = newCardID;
@@ -113,9 +119,7 @@ const loadMyNovels = async (csrf) => {
         ReactDOM.render(<EmptyCard csrf={csrf} />,
             document.getElementById(newCardID)
         );
-    }
-
-    helper.sendPost('/searchNovelsByUser', { user: myUsername, _csrf: csrf }, gotNovels);
+    });
 }
 
 // Open the Novel Creation Page

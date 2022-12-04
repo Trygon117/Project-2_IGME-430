@@ -76,20 +76,19 @@ const EditNovelWindow = (props) => {
 
         novelTitle.appendChild(loadingSpan);
 
-        const syncTitle = (response) => {
+
+        helper.sendPost('/editNovel', { novelID: novel._id, title: textarea.value, _csrf: props.csrf }, (response) => {
+            console.log(response);
+
             if (response.error) {
                 console.log(response.error);
             }
 
-            //console.log(response);
-
-            novel.title = response.updatedNovel.title;
+            // update the local novel data
+            novel.title = response.title;
 
             novelTitle.innerHTML = novel.title;
-        };
-
-
-        helper.sendPost('/editNovel', { novelID: novel._id, title: textarea.value, _csrf: props.csrf }, syncTitle);
+        });
 
     };
 
@@ -104,19 +103,18 @@ const EditNovelWindow = (props) => {
 
         abstractText.appendChild(loadingSpan);
 
-        const syncAbstract = (response) => {
+        helper.sendPost('/editNovel', { novelID: novel._id, abstract: textarea.value, _csrf: props.csrf }, (response) => {
+            //console.log(response);
+
             if (response.error) {
                 console.log(response.error);
             }
 
-            //console.log(response);
-
-            novel.abstract = response.updatedNovel.abstract;
+            // update the local novel data
+            novel.abstract = response.abstract;
 
             abstractText.innerHTML = novel.abstract;
-        };
-
-        helper.sendPost('/editNovel', { novelID: novel._id, abstract: textarea.value, _csrf: props.csrf }, syncAbstract);
+        });
     };
 
     const viewChapters = () => {
@@ -242,17 +240,19 @@ const loadChapters = async (chapters) => {
     const chaptersTableBody = document.getElementById('chapters-table-body');
     const chaptersTable = document.getElementById('chapters-table');
 
+    const chapterRow = document.createElement('tr');
+    const chapterNumber = document.createElement('th');
+    const chapterTitle = document.createElement('td');
+    const chapterViews = document.createElement('td');
+    const chapterPublish = document.createElement('td');
+    const chapterDelete = document.createElement('td');
+
     chaptersTableBody.innerHTML = "";
+
+    console.log(chapters);
 
     Object.keys(chapters).forEach(chapter => {
         if (chapter.includes("chapter")) {
-            const chapterRow = document.createElement('tr');
-            const chapterNumber = document.createElement('th');
-            const chapterTitle = document.createElement('td');
-            const chapterViews = document.createElement('td');
-            const chapterPublish = document.createElement('td');
-            const chapterDelete = document.createElement('td');
-
             console.log(`chapter ${chapter}`);
             console.log(chapters);
 
@@ -291,32 +291,36 @@ const loadChapters = async (chapters) => {
         }
     });
 
-    console.log(chaptersTable);
-
     if (chaptersTable.rows.length - 1 === 0) {
         const chapterRow = document.createElement('tr');
         const chapterNumber = document.createElement('th');
         chapterNumber.innerHTML = 'No published Chapters';
 
         chapterRow.appendChild(chapterNumber);
+        chapterRow.appendChild(chapterTitle);
+        chapterRow.appendChild(chapterViews);
+        chapterRow.appendChild(chapterPublish);
+        chapterRow.appendChild(chapterDelete);
         chaptersTableBody.appendChild(chapterRow);
     };
 };
 
 const loadDrafts = async (chapters) => {
     const chaptersTableBody = document.getElementById('chapters-table-body');
+    const chaptersTable = document.getElementById('chapters-table');
+
+    const chapterRow = document.createElement('tr');
+    const chapterNumber = document.createElement('th');
+    const chapterTitle = document.createElement('td');
+    const chapterViews = document.createElement('td');
+    const chapterPublish = document.createElement('td');
+    const chapterDelete = document.createElement('td');
 
     chaptersTableBody.innerHTML = "";
 
 
     Object.keys(chapters).forEach(chapter => {
         if (chapter.includes("draft")) {
-            const chapterRow = document.createElement('tr');
-            const chapterNumber = document.createElement('th');
-            const chapterTitle = document.createElement('td');
-            const chapterViews = document.createElement('td');
-            const chapterPublish = document.createElement('td');
-            const chapterDelete = document.createElement('td');
 
             console.log(`chapter ${chapter}`);
             console.log(chapters);
@@ -353,26 +357,43 @@ const loadDrafts = async (chapters) => {
             chaptersTableBody.appendChild(chapterRow);
         }
     });
+
+    if (chaptersTable.rows.length - 1 === 0) {
+        const chapterRow = document.createElement('tr');
+        chapterNumber.innerHTML = 'No Drafts';
+
+        chapterRow.appendChild(chapterNumber);
+        chapterRow.appendChild(chapterTitle);
+        chapterRow.appendChild(chapterViews);
+        chapterRow.appendChild(chapterPublish);
+        chapterRow.appendChild(chapterDelete);
+        chaptersTableBody.appendChild(chapterRow);
+        chaptersTableBody.appendChild(chapterRow);
+    };
 };
 
 const getChapters = async (novel, _csrf, handler) => {
     console.log('get chapters');
     console.log(novel);
 
-    const chapterIDs = novel.chapters;
-    console.log(chapterIDs);
+    if (novel.chapters) {
+        const chapterIDs = novel.chapters;
+        console.log(chapterIDs);
 
-    const chapters = {};
+        const chapters = {};
 
-    Object.keys(chapterIDs).forEach((chapter) => {
-        helper.sendPost('/searchChapterByID', { chapterID: chapterIDs[chapter], _csrf }, (response) => {
-            console.log('response');
-            console.log(response);
-            chapters[chapter] = response.chapter;
+        Object.keys(chapterIDs).forEach((chapter) => {
+            helper.sendPost('/searchChapterByID', { chapterID: chapterIDs[chapter], _csrf }, (response) => {
+                console.log('response');
+                console.log(response);
+                chapters[chapter] = response.chapter;
+            });
         });
-    });
-    handler(chapters);
-    return chapters;
+        handler(chapters);
+        return chapters;
+    } else {
+        handler({});
+    }
 }
 
 const init = async () => {
@@ -394,6 +415,9 @@ const init = async () => {
 
     helper.sendPost('/searchNovelByID', { novelID, _csrf: data.csrfToken }, async (novelData) => {
         console.log(novelData);
+        if (novelData.error === 'No Novel Found') {
+            window.location.assign('/create');
+        }
         await getChapters(novelData.novel, data.csrfToken, (chapters) => {
             ReactDOM.render(<EditNovelWindow csrf={data.csrfToken} novel={novelData.novel} chapters={chapters} />,
                 document.getElementById('edit-novel-content')
