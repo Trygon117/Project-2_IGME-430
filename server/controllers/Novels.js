@@ -1,4 +1,6 @@
+const e = require('express');
 const { response } = require('express');
+const { Account } = require('.');
 const models = require('../models');
 
 const { Novel } = models;
@@ -14,7 +16,7 @@ const createNovel = async (req, res) => {
   let abstract = `${req.body.abstract}`;
 
 
-  if (!abstract) {
+  if (!abstract || abstract === undefined) {
     abstract = "No Content Yet...";
   }
 
@@ -211,7 +213,7 @@ const createChapter = async (req, res) => {
 const publishChapter = async (req, res) => {
   console.log('Publish Chapter');
 
-  console.log(req.body);
+  //console.log(req.body);
 
   //check if mode was given
   if (req.body.mode !== null && req.body.mode !== 'add-last' && req.body.mode !== 'unpublish') {
@@ -224,8 +226,8 @@ const publishChapter = async (req, res) => {
   // check if the chapter exists
   await Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
 
-    console.log('thisChapter');
-    console.log(thisChapter);
+    // console.log('thisChapter');
+    // console.log(thisChapter);
 
     if (thisChapter.error) {
       return res.status(400).json({ error: thisChapter.error });
@@ -281,7 +283,7 @@ const publishChapter = async (req, res) => {
           console.log('chapterResponse');
           console.log(chapterResponse);
 
-          const novelUpdates = { novelID: req.body.NovelID };
+          const novelUpdates = { novelID: req.body.novelID };
 
           // recursive function to rename and order every ""-chapter
           const renameChapters = (chapters, chapterType) => {
@@ -293,11 +295,11 @@ const publishChapter = async (req, res) => {
                 } else {
                   chapters.delete(key);
                   chapters.set(`${chapterType}-${chapterNum}`, value);
-                  renameChapters(chapters, chapterType);
-                  return;
+                  return renameChapters(chapters, chapterType);
                 }
               }
             }
+            return chapters;
           }
 
           const referenceUpdate = {};
@@ -325,6 +327,10 @@ const publishChapter = async (req, res) => {
             await chapters.set(`${newChapterName}`, thisChapter._id);
 
             renameChapters(chapters, 'chapter');
+            renameChapters(chapters, 'draft');
+
+            console.log('chapters');
+            console.log(chapters);
 
             novelUpdates.chapters = chapters;
 
@@ -491,8 +497,8 @@ const publishChapter = async (req, res) => {
 
           } else if (req.body.mode === 'add-last') {
             // add as the last chapter
-
             console.log('add-last');
+
             const chapters = novelResponse.chapters;
 
             // delete the previous id
@@ -512,6 +518,7 @@ const publishChapter = async (req, res) => {
 
           // update the novel
           await Novel.updateNovelByID(req, novelUpdates, async (novelUpdateResponse) => {
+
             if (req.body.mode === 'replace') {
               console.log('updating reference chapter');
               console.log(referenceUpdate);
@@ -539,6 +546,8 @@ const publishChapter = async (req, res) => {
                 });
               }
 
+              Account.updateLibrary(req);
+
               return res.status(200).json({ chapter: chapterResponse, novel: novelUpdateResponse, displacedChapters });
 
             } else {
@@ -553,6 +562,8 @@ const publishChapter = async (req, res) => {
 
       // make sure that there is a novel to replace
       if (req.body.referenceChapter) {
+        console.log(req.body.referenceChapter);
+        console.log(req.body.novelID);
         // search by the given chapter and novel
         Chapter.searchByCriteria(req, { chapter: req.body.referenceChapter, novelID: req.body.novelID }, (referenceResponse) => {
           // console.log('referenceResponse');
@@ -607,7 +618,7 @@ const publishChapter = async (req, res) => {
 
             publish(referenceChapter);
           } else {
-            return res.status(400).json({ error: "Refernce chapter is either unpublished or does not exist" });
+            return res.status(400).json({ error: "Reference chapter is either unpublished or does not exist" });
           }
         }).catch(err => {
           console.log(err);
@@ -660,6 +671,44 @@ const editChapter = async (req, res) => {
 
 const deleteChapter = (req, res) => {
   console.log('Delete Chapter');
+
+  if (req.body.chapterID === null) {
+    return res.status(400).json({ error: 'Missing chapterID' });
+  }
+
+  Chapter.searchByID(req, req.body.chapterID, (chapterResponse) => {
+    if (chapterResponse.error) {
+      return res.status(400).json({ error: chapterResponse });
+    }
+
+    Novel.searchByID(req, chapterResponse.novelID, async (novelResponse) => {
+      if (novelResponse.error) {
+        return res.status(400).json({ error: novelResponse.error });
+      }
+
+      const novelUpdates = { novelID: chapterResponse.novelID };
+
+      const chapters = novelResponse.chapters;
+
+      // delete the previous id
+      await chapters.delete(chapterResponse.chapter);
+
+      novelUpdates.chapters = chapters;
+
+      Novel.updateNovelByID(req, novelUpdates, async (novelUpdate) => {
+        if (novelUpdate.error) {
+          return res.status(400).json({ error: novelUpdate.error });
+        }
+
+        await Chapter.ChapterModel.deleteOne({ _id: req.body.chapterID });
+
+        Account.updateLibrary(req);
+
+        res.status(200).json({ message: 'Success' });
+
+      });
+    });
+  });
 };
 
 // Searching \\
@@ -693,7 +742,7 @@ const searchNovelByID = async (req, res) => {
 
     return res.status(200).json({ novel });
   });
-}
+};
 
 const searchChapterByID = async (req, res) => {
   const searchedID = req.body.chapterID;
@@ -709,7 +758,61 @@ const searchChapterByID = async (req, res) => {
 
     return res.status(200).json({ 'chapter': response });
   });
+};
+
+const searchChapterNumber = async (req, res) => {
+  console.log('search chapter number');
+
+  console.log(req.body);
+
+  if (req.body.novelID === null || req.body.chapterNumber === null) {
+    return res.status(400).json({ error: 'both novelID and chapterNumber are required' });
+  }
+
+  await Novel.searchByID(req, req.body.novelID, async (novelResponse) => {
+    if (novelResponse.error) {
+      return res.status(400).json(novelResponse.error);
+    }
+
+    const chapters = novelResponse.chapters;
+
+    let chapterID;
+
+    for (const [key, value] of chapters) {
+      if (key.includes('chapter')) {
+        const number = key.split('chapter-')[1];
+        if (number.includes(req.body.chapterNumber)) {
+          chapterID = value;
+          break;
+        }
+      }
+    }
+
+    if (!chapterID) {
+      return res.status(400).json({ error: 'chapter not found' });
+    }
+
+    await Chapter.searchByID(req, chapterID, (chapterResponse) => {
+      if (chapterResponse.error) {
+        return res.status(400).json(chapterResponse.error);
+      }
+
+      return res.status(200).json(chapterResponse);
+    });
+  });
 }
+
+const getAllNovels = async (req, res) => {
+  await Novel.getAllNovels((response) => {
+    // console.log('response');
+    // console.log(response);
+    if (response.error) {
+      res.status(400).json({ error: response.error });
+    } else {
+      res.status(200).json(response);
+    }
+  });
+};
 
 module.exports = {
   createNovel,
@@ -723,4 +826,6 @@ module.exports = {
   searchNovelsByUser,
   searchNovelByID,
   searchChapterByID,
+  getAllNovels,
+  searchChapterNumber,
 };

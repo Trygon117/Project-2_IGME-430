@@ -6,6 +6,9 @@ const library = require('./library.jsx');
 const login = require('./login.jsx');
 const navbar = require('./navbar.jsx');
 const profile = require('./profile.jsx');
+const readNovel = require('./readNovel.jsx');
+const viewNovel = require('./viewNovel.jsx');
+const notFound = require('./notFound.jsx');
 const helper = require('./helper.js');
 
 const init = async () => {
@@ -56,6 +59,15 @@ const init = async () => {
             break;
         case 'profile':
             profile.init();
+            break;
+        case 'viewNovel':
+            viewNovel.init();
+            break;
+        case 'readNovel':
+            readNovel.init();
+            break;
+        case 'notFound':
+            notFound.init();
             break;
         default:
             console.log(`unknown page: ${page}`);

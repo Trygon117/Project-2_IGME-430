@@ -167,7 +167,9 @@ const searchByCriteria = async (req, novelFilters, handler) => {
 const updateNovelByID = async (req, updates, handler) => {
   const sessionUsername = req.session.account.username;
 
-  await NovelModel.findById(req.body.novelID, async (err, novel) => {
+  //console.log(updates);
+
+  await NovelModel.findById(updates.novelID, async (err, novel) => {
     if (err) {
       console.log('an error');
       console.log(err);
@@ -175,8 +177,11 @@ const updateNovelByID = async (req, updates, handler) => {
       return;
     }
 
+    // console.log('novel');
+    // console.log(novel);
+
     if (!novel) {
-      handler({ error: `Novel with with id: "#${req.body.novelID}" not found` });
+      handler({ error: `Novel with with id: "${updates.novelID}" not found` });
       return;
     }
 
@@ -227,20 +232,22 @@ const updateNovelByID = async (req, updates, handler) => {
       }
     });
 
-    // update chapter counts
-    let publishedChapters = 0;
-    let totalChapters = 0;
+    if (novel.chapters && Object.keys(novel.chapters).length !== 0) {
+      // update chapter counts
+      let publishedChapters = 0;
+      let totalChapters = 0;
 
-    // count the chapters
-    for (const [key, value] of novel.chapters) {
-      if (key.includes('chapter-')) {
-        publishedChapters++;
+      // count the chapters
+      for (const [key, value] of novel.chapters) {
+        if (key.includes('chapter-')) {
+          publishedChapters++;
+        }
+        totalChapters++;
       }
-      totalChapters++;
-    }
 
-    novel.publishedChapterCount = publishedChapters;
-    novel.totalChapterCount = totalChapters;
+      novel.publishedChapterCount = publishedChapters;
+      novel.totalChapterCount = totalChapters;
+    }
 
     result = await novel.save();
 
@@ -254,9 +261,31 @@ const updateNovelByID = async (req, updates, handler) => {
   });
 };
 
+// sends an array of all the novels to the handler function (potentially laggy id too many novels)
+const getAllNovels = async (handler) => {
+  const novels = [];
+  for await (const novel of NovelModel.find()) {
+    // console.log('novel');
+    // console.log(novel);
+    novels.unshift(novel);
+  }
+  // console.log('novels');
+  // console.log(novels);
+  handler(novels);
+}
+
+// sends every novel individually to the handler function
+const iterateAllNovels = async (handler) => {
+  for await (const novel of NovelModel.find()) {
+    handler(novel);
+  }
+}
+
 module.exports = {
   NovelModel,
   searchByID,
   searchByCriteria,
   updateNovelByID,
+  getAllNovels,
+  iterateAllNovels,
 };

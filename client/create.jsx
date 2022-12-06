@@ -86,6 +86,7 @@ const loadMyNovels = async (csrf) => {
 
     const loggedInAsResponse = await fetch('/getLoggedInAs');
     const loggedInAsData = await loggedInAsResponse.json();
+    console.log(loggedInAsData);
     const myUsername = loggedInAsData.username;
 
     ReactDOM.render(<MyNovels csrf={csrf} />,

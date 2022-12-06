@@ -2,6 +2,7 @@ const controllers = require('./controllers');
 const mid = require('./middleware');
 
 const router = (app) => {
+  // account
   app.get('/getToken', mid.requiresSecure, controllers.Account.getToken);
 
   app.get('/login', mid.requiresSecure, mid.requiresLogout, controllers.Account.loginPage);
@@ -17,6 +18,14 @@ const router = (app) => {
 
   app.get('/logout', mid.requiresLogin, mid.requiresSecure, controllers.Account.logout);
 
+  app.get('/getMyLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.getMyLibrary);
+
+  app.post('/getChapterNumber', mid.requiresLogin, mid.requiresSecure, controllers.Account.getChapterNumber);
+
+  app.post('/setChapterNumber', mid.requiresLogin, mid.requiresSecure, controllers.Account.setChapterNumber);
+
+  // pages
+
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);
 
   app.get('/create', mid.requiresSecure, mid.requiresLogin, controllers.Pages.createPage);
@@ -28,6 +37,11 @@ const router = (app) => {
   app.get('/library', mid.requiresSecure, mid.requiresLogin, controllers.Pages.libraryPage);
 
   app.get('/profile', mid.requiresSecure, mid.requiresLogin, controllers.Pages.profilePage);
+
+  app.get('/viewNovel', mid.requiresSecure, controllers.Pages.viewNovelPage);
+
+  app.get('/readNovel', mid.requiresSecure, controllers.Pages.readNovelPage);
+
 
   // Novels
   app.post('/createNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.createNovel);
@@ -54,7 +68,22 @@ const router = (app) => {
 
   app.post('/searchChapterByID', mid.requiresSecure, controllers.Novels.searchChapterByID);
 
+  app.post('/searchChapterNumber', mid.requiresSecure, controllers.Novels.searchChapterNumber);
+
+  app.get('/getAllNovels', mid.requiresSecure, controllers.Novels.getAllNovels);
+
+  // account
+
+  app.post('/addNovelToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToLibrary);
+
+  app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
+
+
+  // default
+
   app.get('/', mid.requiresSecure, controllers.Pages.homePage);
+
+  app.get('/*', controllers.Pages.notFound);
 };
 
 module.exports = router;

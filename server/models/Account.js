@@ -6,6 +6,7 @@
 */
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
+const Novel = require('./Novel.js');
 
 /* When generating a password hash, bcrypt (and most other password hash
    functions) use a "salt". The salt is simply extra data that gets hashed
@@ -32,6 +33,12 @@ const AccountSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
+  },
+  library: {
+    type: Array,  // an array of maps which are the different shelves
+  },
+  chapters: { // A map with the id of the novel as the key and a chapter number as a value
+    type: Map,
   },
   createdDate: {
     type: Date,
@@ -73,4 +80,193 @@ AccountSchema.statics.authenticate = async (username, password, callback) => {
 };
 
 AccountModel = mongoose.model('Account', AccountSchema);
-module.exports = AccountModel;
+
+// helper functions
+
+// find a single account by its _id
+const searchByID = async (req, userID, handler) => {
+  const sessionUsername = req.session.account.username;
+
+  await AccountModel.findById(userID, (err, doc) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    if (doc === null) {
+      handler({ error: "No Account Found" });
+      return;
+    }
+
+    let user = doc;
+
+    // hide some information about users from others
+    if (doc._id != userID || sessionUsername != doc.username) {
+      user = { username: doc.username, library: doc.library };
+    }
+
+    handler(user);
+    return;
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    handler({ error: 'An error has occurred' });
+    return;
+  });
+};
+
+// find multiple accounts that meet the given filter requirements
+const searchByCriteria = async (req, userFilters, handler) => {
+  const session = req.session.account;
+
+  await AccountModel.find(userFilters, (err, docs) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    console.log(docs);
+
+    const users = {};
+
+    // hide information about novels the user isn't allowed to access
+    docs.forEach(user => {
+
+      console.log()
+      if (session._id != user._id || session.username != user.username) {
+        users[user.username] = { username: user.username, library: user.library };
+      } else {
+        users[user.username] = user;
+      }
+    });
+
+    if (Object.keys(users).length === 0) {
+      console.log('No users Found');
+      handler({ error: 'No Users Found' });
+      return;
+    }
+
+    console.log('found users');
+
+    handler(users);
+    return
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    handler({ error: 'An error has occurred' });
+    return;
+  });
+};
+
+// update the content of a specific account
+const updateAccountByID = async (req, updates, handler) => {
+  const sessionUsername = req.session.account.username;
+
+  await AccountModel.findById(updates.userID, async (err, user) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    if (!user) {
+      handler({ error: 'No User Found' });
+      return;
+    }
+
+    // You can only update novels that you are the author of
+    if (user._id != updates.userID) {
+      handler({ error: "User does not have permission to edit the data of this novel " });
+      return;
+    }
+
+    Object.entries(updates).forEach(entry => {
+      const [key, value] = entry;
+      switch (key) {
+        case 'username':
+          user.username = value;
+          break;
+        case 'password':
+          user.password = value;
+          break;
+        case 'library':
+          user.library = value;
+          break;
+        default:
+          break;
+      }
+    });
+
+
+    result = await user.save();
+
+
+    handler(result);
+    return;
+
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    handler({ error: 'An error has occurred' });
+    return;
+  });
+};
+
+const updateLibrary = async (req) => {
+
+  const session = req.session.account;
+
+  await AccountModel.findById(session._id, async (err, user) => {
+    if (err) {
+      console.log('an error');
+      console.log(err);
+      handler({ error: 'An error has occurred' });
+      return;
+    }
+
+    console.log(user);
+
+    const library = [];
+
+    for (const shelf of user.library) {
+      const newShelf = {};
+      for (const key of Object.keys(shelf)) {
+        if (key === 'title') {
+          newShelf[key] = shelf[key];
+          continue;
+        }
+        await Novel.searchByID(req, key, (response) => {
+          if (!response.error) {
+            newShelf[key] = response;
+          }
+        });
+      }
+      library.unshift(newShelf);
+    }
+
+    const updatedUser = user;
+    updatedUser.library = library;
+    updatedUser.save();
+
+  }).clone().catch((err) => {
+    console.log('caught error');
+    console.log(err);
+    handler({ error: 'An error has occurred' });
+    return;
+  });
+}
+
+
+module.exports = {
+  AccountModel,
+  searchByID,
+  searchByCriteria,
+  updateAccountByID,
+  updateLibrary,
+};
+

@@ -1,9 +1,12 @@
 const helper = require('./helper.js');
 const Buffer = require('buffer').Buffer;
+const Modal = require('./modal.jsx');
 
 // Create the novel editor page
 const EditNovelWindow = (props) => {
+    console.log('edit novel window');
     console.log(props);
+
     let novel = props.novel;
     let published = "False";
     if (novel.published) published = "True";
@@ -25,140 +28,95 @@ const EditNovelWindow = (props) => {
         });
     };
 
-    const openModal = (e) => {
-        const modalType = e.currentTarget.getAttribute('data-modal-type');
-
-        const textarea = document.getElementById("modal-textarea");
-        const modal = document.getElementById("modal");
-        const saveButton = document.getElementById("modal-save-button");
-        const modalTitle = document.getElementById("modal-title");
-
-        switch (modalType) {
-            case "abstract":
-                textarea.value = novel.abstract;
-                textarea.rows = "15";
-                saveButton.removeEventListener("click", updateNovelTitle);
-                saveButton.addEventListener("click", updateNovelAbstract);
-                modalTitle.innerHTML = "Abstract";
-                break;
-            case "title":
-                textarea.value = novel.title;
-                textarea.rows = "1";
-                saveButton.removeEventListener("click", updateNovelAbstract);
-                saveButton.addEventListener("click", updateNovelTitle);
-                modalTitle.innerHTML = "Title";
-                break;
-        }
-        modal.classList.add('is-active');
-    };
-
-    const closeModal = () => {
-        const modal = document.getElementById("modal");
-        modal.classList.remove('is-active');
-    };
-
-    const closeAllModals = (e) => {
-        (document.querySelectorAll('.modal') || []).forEach((modal) => {
-            modal.classList.remove('is-active');
-        });
-    };
-
     const updateNovelTitle = (e) => {
-        const textarea = document.getElementById("modal-textarea");
         const novelTitle = document.getElementById("novel-title");
 
         console.log("Update title");
 
-        closeModal();
+        Modal.openModal({ modalType: 'title', title: novel.title }, (modalResponse) => {
+            const loadingSpan = document.createElement('span');
+            loadingSpan.classList = "bulma-loader-mixin";
 
-        const loadingSpan = document.createElement('span');
-        loadingSpan.classList = "bulma-loader-mixin";
-
-        novelTitle.appendChild(loadingSpan);
+            novelTitle.appendChild(loadingSpan);
 
 
-        helper.sendPost('/editNovel', { novelID: novel._id, title: textarea.value, _csrf: props.csrf }, (response) => {
-            console.log(response);
+            helper.sendPost('/editNovel', { novelID: novel._id, title: modalResponse.title, _csrf: props.csrf }, (response) => {
+                console.log(response);
 
-            if (response.error) {
-                console.log(response.error);
-            }
+                if (response.error) {
+                    console.log(response.error);
+                }
 
-            // update the local novel data
-            novel.title = response.title;
+                // update the local novel data
+                novel.title = response.title;
 
-            novelTitle.innerHTML = novel.title;
+                novelTitle.innerHTML = novel.title;
+            });
         });
-
     };
 
     const updateNovelAbstract = (e) => {
         const textarea = document.getElementById("modal-textarea");
         const abstractText = document.getElementById("abstract-text");
 
-        closeModal();
+        Modal.openModal({ modalType: 'abstract', abstract: novel.abstract }, (modalResponse) => {
 
-        const loadingSpan = document.createElement('span');
-        loadingSpan.classList = "bulma-loader-mixin";
+            const loadingSpan = document.createElement('span');
+            loadingSpan.classList = "bulma-loader-mixin";
 
-        abstractText.appendChild(loadingSpan);
+            abstractText.appendChild(loadingSpan);
 
-        helper.sendPost('/editNovel', { novelID: novel._id, abstract: textarea.value, _csrf: props.csrf }, (response) => {
-            //console.log(response);
+            helper.sendPost('/editNovel', { novelID: novel._id, abstract: modalResponse.abstract, _csrf: props.csrf }, (response) => {
+                //console.log(response);
 
-            if (response.error) {
-                console.log(response.error);
-            }
+                if (response.error) {
+                    console.log(response.error);
+                }
 
-            // update the local novel data
-            novel.abstract = response.abstract;
+                // update the local novel data
+                novel.abstract = response.abstract;
 
-            abstractText.innerHTML = novel.abstract;
+                abstractText.innerHTML = novel.abstract;
+            });
         });
     };
 
     const viewChapters = () => {
-        const chaptersButton = document.getElementById('chapters-button');
-        const draftsButton = document.getElementById('drafts-button');
-        const chapterTitle = document.getElementById('chapter-title');
+        const chaptersButtonLi = document.getElementById('chapters-button-li');
+        const draftsButtonLi = document.getElementById('drafts-button-li');
 
-        chaptersButton.classList.add('is-link');
-        draftsButton.classList.remove('is-link');
+        chaptersButtonLi.classList.add('is-active');
+        draftsButtonLi.classList.remove('is-active');
 
-        chapterTitle.innerHTML = "Chapters";
-
-        loadChapters(props.chapters);
+        loadChapters(props.chapters, props.csrf);
     };
 
     const viewDrafts = () => {
-        const chaptersButton = document.getElementById('chapters-button');
-        const draftsButton = document.getElementById('drafts-button');
-        const chapterTitle = document.getElementById('chapter-title');
+        const chaptersButtonLi = document.getElementById('chapters-button-li');
+        const draftsButtonLi = document.getElementById('drafts-button-li');
 
-        chaptersButton.classList.remove('is-link');
-        draftsButton.classList.add('is-link');
+        draftsButtonLi.classList.add('is-active');
+        chaptersButtonLi.classList.remove('is-active');
 
-        chapterTitle.innerHTML = "Drafts";
-
-        loadDrafts(props.chapters);
+        loadDrafts(props.chapters, props.csrf);
     };
 
     return (
         <div>
 
             <div id="modal" className="modal">
-                <div className="modal-background" onClick={closeAllModals}></div>
+                <div className="modal-background" onClick={Modal.closeAllModals}></div>
                 <div className="modal-card">
                     <header className="modal-card-head">
                         <p id="modal-title" className="modal-card-title"></p>
-                        <button className="delete" aria-label="close" onClick={closeModal}></button>
+                        <button className="delete" aria-label="close" onClick={Modal.closeModal}></button>
                     </header>
-                    <section className="modal-card-body">
-                        <textarea id="modal-textarea" className="textarea has-fixed-size" placeholder="Add a description..." rows="10"></textarea>
+                    <section id='modal-card-body' className="modal-card-body">
+
                     </section>
                     <footer className="modal-card-foot">
-                        <button id='modal-save-button' className="button is-success">Save changes</button>
-                        <button className="button" onClick={closeModal}>Cancel</button>
+                        <button id='modal-save-button' className="button is-success" onClick={Modal.closeModal}>Save changes</button>
+                        <button className="button" onClick={Modal.closeModal}>Cancel</button>
                     </footer>
                 </div>
             </div>
@@ -185,12 +143,12 @@ const EditNovelWindow = (props) => {
                     <div className='column is-three-quarters' style={{ height: '34.35vw', minHeight: "250px", display: 'flex', flexFlow: 'column' }}>
                         <span style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                             <h1 id="novel-title" className="title" style={{ margin: 0, paddingRight: '10px' }}>{novel.title}</h1>
-                            <a onClick={openModal} data-modal-type="title"><i className="fa-solid fa-pencil"></i></a>
+                            <a onClick={updateNovelTitle} data-modal-type="title"><i className="fa-solid fa-pencil"></i></a>
                         </span>
                         <h2 className='subtitle'>By: {novel.author}</h2>
                         <span style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                             <h2 className='subtitle' style={{ margin: 0, paddingRight: '10px' }}>Abstract</h2>
-                            <a onClick={openModal} data-modal-type="abstract"><i className="fa-solid fa-pencil"></i></a>
+                            <a onClick={updateNovelAbstract} data-modal-type="abstract"><i className="fa-solid fa-pencil"></i></a>
                         </span>
                         <div id="abstract-text" style={{ height: '100%', width: '100%', minHeight: '100px' }}>
                             {novel.abstract}
@@ -210,25 +168,36 @@ const EditNovelWindow = (props) => {
 
                 <hr></hr>
 
-                <div>
-                    <a id='chapters-button' className='button is-link' onClick={viewChapters}>Chapters</a>
-                    <a id='drafts-button' className='button' onClick={viewDrafts} style={{ marginLeft: 10 }}>Drafts</a>
-                    <h1 id='chapter-title' className='title'>Chapters</h1>
+                <div style={{ marginLeft: '20px', marginRight: '20px' }}>
 
-                    <div id='chapters-div'>
-                        <table id='chapters-table' className='table is-hoverable' style={{ width: '100%' }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ padding: 0, paddingLeft: 10, width: 50 }}><abbr title="Chapter">Chapter</abbr></th>
-                                    <th style={{ padding: 0, width: 100 }}><abbr title="Name">Name</abbr></th>
-                                    <th style={{ padding: 0, width: 50 }}><abbr title="Views">Views</abbr></th>
-                                    <th style={{ padding: 0, width: 50 }}> <abbr title="Publish">Publish</abbr></th>
-                                    <th style={{ padding: 0, width: 50 }}> <abbr title="Delete">Delete</abbr></th>
-                                </tr>
-                            </thead>
-                            <tbody id='chapters-table-body'>
-                            </tbody>
-                        </table>
+                    <div className='tabs is-toggle'>
+                        <ul>
+                            <li id='chapters-button-li' className='is-active'><a id='chapters-button' onClick={viewChapters}>Chapters</a></li>
+                            <li id='drafts-button-li'><a id='drafts-button' onClick={viewDrafts} >Drafts</a></li>
+                        </ul>
+                    </div>
+
+
+
+                    <div id='chapters-heading' className='columns' style={{ width: '100%', cursor: 'hand', display: 'flex', justifyContent: 'space-between', borderBottom: 'thick solid' }}>
+                        <span id='chapter-number' className='column has-text-weight-bold' style={{ textAlign: 'center' }}>
+                            Chapter
+                        </span>
+                        <span id='chapter-title' className='column is-three-fifths has-text-weight-bold'>
+                            Title
+                        </span>
+                        <span id='chapter-views' className='column has-text-weight-bold' style={{ textAlign: 'center' }}>
+                            Views
+                        </span>
+                        <span id='chapter-publish' className='column has-text-weight-bold' style={{ textAlign: 'center' }}>
+                            Publish
+                        </span>
+                        <span id='chapter-publish' className='column has-text-weight-bold' style={{ textAlign: 'center' }}>
+                            Delete
+                        </span>
+                    </div>
+                    <div id='chapters-div' style={{ width: '100%', display: 'flex', flexFlow: 'column', gap: '20px' }}>
+
                     </div>
                 </div>
             </div>
@@ -236,143 +205,144 @@ const EditNovelWindow = (props) => {
     );
 };
 
-const loadChapters = async (chapters) => {
-    const chaptersTableBody = document.getElementById('chapters-table-body');
-    const chaptersTable = document.getElementById('chapters-table');
+const ChapterRow = (props) => {
+    // console.log('ChapterRow');
+    // console.log(props);
 
-    chaptersTableBody.innerHTML = "";
+    const openChapter = () => {
+        window.localStorage.setItem('partchment-editorChapterID', props.chapters[props.chapter]._id);
+        window.location.assign('/editChapter');
+    }
+    const mouseEnter = () => {
+        const row = document.getElementById(`${props.chapter}-row`);
+        row.style.backgroundColor = '#bbf0de';
+    }
+    const mouseLeave = () => {
+        const row = document.getElementById(`${props.chapter}-row`);
+        row.style.backgroundColor = '#ffffff';
+    }
+    const publishChapter = () => {
+        console.log('publish chapter');
+        console.log(props);
 
-    console.log('load chapters');
-    console.log(chapters);
+        // if it is already published
+        if (props.chapters[props.chapter].published) {
+            helper.publishChapter('unpublish', { chapter: props.chapters[props.chapter], _csrf: props.csrf }, (response) => {
 
-    Object.keys(chapters).forEach(chapter => {
-        //console.log(`${chapter}`);
-        //console.log(chapters[chapter]);
+                // reload the page
+                window.location = '/editNovel';
 
-        // if this is a chapter and not a draft
-        if (chapter.includes("chapter")) {
-            // console.log(`chapter ${chapter}`);
-            // console.log(chapters);
-
-            const chapterRow = document.createElement('tr');
-            const chapterNumber = document.createElement('th');
-            const chapterTitle = document.createElement('td');
-            const chapterViews = document.createElement('td');
-            const chapterPublish = document.createElement('td');
-            const chapterDelete = document.createElement('td');
-
-            chapterRow.style.width = '100%';
-            chapterRow.style.cursor = 'hand';
-            chapterRow.addEventListener('click', () => {
-                window.localStorage.setItem('partchment-editorChapterID', chapters[chapter]._id);
-                window.location.assign('/editChapter');
             });
 
-            chapterNumber.innerHTML = chapter;
-            chapterTitle.innerHTML = chapters[chapter].title;
-            chapterViews.innerHTML = chapters[chapter].views;
+        } else {
 
-            const deleteButton = document.createElement('a');
-            const deleteIcon = document.createElement('i');
-            deleteIcon.classList = "fa-solid fa-x";
+            Modal.openModal({ modalType: 'publishChapter', chapter: props.chapters[props.chapter], csrf: props.csrf }, (response) => {
+                console.log('modal response');
+                console.log(response);
+                helper.publishChapter(response.mode, { chapter: response.chapter, referenceChapter: response.referenceChapter, _csrf: props.csrf }, (publishResponse) => {
 
-            deleteButton.appendChild(deleteIcon);
-            chapterDelete.appendChild(deleteButton);
+                    //console.log(publishResponse);
+                    // reload the page
+                    window.location = '/editNovel';
 
-            const publishButton = document.createElement('a');
-            const publishIcon = document.createElement('i');
-            publishIcon.classList = "fa-solid fa-upload";
+                });
 
-            publishButton.appendChild(publishIcon);
-            chapterPublish.appendChild(publishButton);
+            });
 
+        }
+    }
+    const deleteChapter = () => {
+        Modal.openModal({ modalType: 'deleteChapter', chapter: props.chapters[props.chapter], csrf: props.csrf }, (response) => {
+            helper.sendPost('/deleteChapter', { chapterID: props.chapters[props.chapter]._id, _csrf: props.csrf }, (response) => {
+                console.log(response);
+            });
+        });
+    }
+    let pButtonIconClass = 'fa-solid fa-check';
+    let pButtonClass = 'button is-outline';
+    if (props.chapters[props.chapter].published) {
+        pButtonIconClass = 'fa-solid fa-minus';
+        pButtonClass = 'button is-warning';
+    }
+    return (
+        <div id={`${props.chapter}-row`} className='columns' style={{ width: '100%', cursor: 'hand', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} onMouseEnter={mouseEnter} onMouseLeave={mouseLeave}>
+            <span id='chapter-number' className='column' style={{ textAlign: 'center' }} onClick={openChapter}>
+                {props.chapter}
+            </span>
+            <span id='chapter-title' className='column is-three-fifths' onClick={openChapter}>
+                {props.chapters[props.chapter].title}
+            </span>
+            <span id='chapter-views' className='column' style={{ textAlign: 'center' }} onClick={openChapter}>
+                {props.chapters[props.chapter].views}
+            </span>
+            <span id='chapter-publish' className='column' style={{ textAlign: 'center' }}>
+                <a id='publish-button' className={pButtonClass} onClick={publishChapter}><i id='publish-icon' className={pButtonIconClass}></i></a>
+            </span>
+            <span id='chapter-publish' className='column' style={{ textAlign: 'center' }}>
+                <a id='delete-button' className='button is-danger' onClick={deleteChapter}><i id='delete-icon' className='fa-solid fa-x'></i></a>
+            </span>
+        </div>
+    )
+}
 
-            chapterRow.appendChild(chapterNumber);
-            chapterRow.appendChild(chapterTitle);
-            chapterRow.appendChild(chapterViews);
-            chapterRow.appendChild(chapterPublish);
-            chapterRow.appendChild(chapterDelete);
-            chaptersTableBody.appendChild(chapterRow);
+const loadChapters = async (chapters, csrf) => {
+    // console.log('load chapters');
+    // console.log(csrf);
+
+    const chaptersDiv = document.getElementById('chapters-div');
+
+    chaptersDiv.innerHTML = '';
+
+    Object.keys(chapters).forEach(chapter => {
+        if (chapter.includes('chapter')) {
+
+            const divRow = document.createElement('div');
+
+            // load a chapter row
+            ReactDOM.render(<ChapterRow chapter={chapter} chapters={chapters} csrf={csrf} />,
+                divRow
+            );
+
+            chaptersDiv.appendChild(divRow);
         }
     });
 
-    if (chaptersTable.rows.length - 1 === 0) {
-        const chapterRow = document.createElement('tr');
-        const chapterNumber = document.createElement('th');
-        chapterNumber.innerHTML = 'No published Chapters';
+    if (chaptersDiv.innerHTML === '') {
+        const divRow = document.createElement('div');
+        divRow.innerText = 'No Published Chapters';
 
-        chapterRow.appendChild(chapterNumber);
-        chapterRow.appendChild(chapterTitle);
-        chapterRow.appendChild(chapterViews);
-        chapterRow.appendChild(chapterPublish);
-        chapterRow.appendChild(chapterDelete);
-        chaptersTableBody.appendChild(chapterRow);
+        chaptersDiv.appendChild(divRow);
     };
 };
 
-const loadDrafts = async (chapters) => {
-    const chaptersTableBody = document.getElementById('chapters-table-body');
-    const chaptersTable = document.getElementById('chapters-table');
+const loadDrafts = async (chapters, csrf) => {
+    // console.log('load drafts');
+    // console.log(csrf);
+    const chaptersDiv = document.getElementById('chapters-div');
 
-    chaptersTableBody.innerHTML = "";
-
+    chaptersDiv.innerHTML = '';
 
     Object.keys(chapters).forEach(chapter => {
         if (chapter.includes("draft")) {
-            // console.log(`chapter ${chapter}`);
-            // console.log(chapters);
 
-            const chapterRow = document.createElement('tr');
-            const chapterNumber = document.createElement('th');
-            const chapterTitle = document.createElement('td');
-            const chapterViews = document.createElement('td');
-            const chapterPublish = document.createElement('td');
-            const chapterDelete = document.createElement('td');
+            const divRow = document.createElement('div');
 
-            chapterRow.style.width = '100%';
-            chapterRow.addEventListener('click', () => {
-                window.localStorage.setItem('partchment-editorChapterID', chapters[chapter]._id);
-                window.location.assign('/editChapter');
-            });
+            // load a chapter row
+            ReactDOM.render(<ChapterRow chapter={chapter} chapters={chapters} csrf={csrf} />,
+                divRow
+            );
 
-            chapterNumber.innerHTML = chapter;
-            chapterTitle.innerHTML = chapters[chapter].title;
-            chapterViews.innerHTML = chapters[chapter].views;
+            chaptersDiv.appendChild(divRow);
 
-            const deleteButton = document.createElement('a');
-            const deleteIcon = document.createElement('i');
-            deleteIcon.classList = "fa-solid fa-x";
-
-            deleteButton.appendChild(deleteIcon);
-            chapterDelete.appendChild(deleteButton);
-
-            const publishButton = document.createElement('a');
-            const publishIcon = document.createElement('i');
-            publishIcon.classList = "fa-solid fa-upload";
-
-            publishButton.appendChild(publishIcon);
-            chapterPublish.appendChild(publishButton);
-
-            chapterRow.appendChild(chapterNumber);
-            chapterRow.appendChild(chapterTitle);
-            chapterRow.appendChild(chapterViews);
-            chapterRow.appendChild(chapterPublish);
-            chapterRow.appendChild(chapterDelete);
-            chaptersTableBody.appendChild(chapterRow);
         }
     });
 
-    if (chaptersTable.rows.length - 1 === 0) {
-        const chapterRow = document.createElement('tr');
-        chapterNumber.innerHTML = 'No Drafts';
+    if (chaptersDiv.innerHTML === '') {
+        console.log('empty');
+        const divRow = document.createElement('div');
+        divRow.innerText = 'No Drafts';
 
-        chapterRow.appendChild(chapterNumber);
-        chapterRow.appendChild(chapterTitle);
-        chapterRow.appendChild(chapterViews);
-        chapterRow.appendChild(chapterPublish);
-        chapterRow.appendChild(chapterDelete);
-        chaptersTableBody.appendChild(chapterRow);
-        chaptersTableBody.appendChild(chapterRow);
+        chaptersDiv.appendChild(divRow);
     };
 };
 
@@ -380,7 +350,7 @@ const getChapters = async (novel, _csrf, handler) => {
     console.log('get chapters');
     //console.log(novel);
 
-    if (novel.chapters) {
+    if (novel.chapters && Object.keys(novel.chapters).length !== 0) {
         const chapterIDs = novel.chapters;
         console.log('chapterIDs');
         console.log(chapterIDs);
@@ -438,7 +408,7 @@ const init = async () => {
                 document.getElementById('edit-novel-content')
             );
 
-            loadChapters(chapters);
+            loadChapters(chapters, data.csrfToken);
         });
     });
 };

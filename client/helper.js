@@ -65,8 +65,44 @@ const isDescendent = (parent, child) => {
     return false;
 }
 
+const publishChapter = (mode, data, handler) => {
+    const body = {};
+    switch (mode) {
+        case 'add-last':
+            body.chapterID = data.chapter._id;
+            body.novelID = data.chapter.novelID;
+            body.chapter = data.chapter.chapter;
+            body.mode = mode;
+            break;
+        case 'replace':
+        // all do the same
+        case 'insert-before':
+        // all do the same
+        case 'insert-after':
+            body.chapterID = data.chapter._id;
+            body.novelID = data.chapter.novelID;
+            body.chapter = data.chapter.chapter;
+            body.mode = mode;
+            body.referenceChapter = data.referenceChapter; // litterally just the .chapter
+            break;
+        case 'unpublish':
+            body.chapterID = data.chapter._id;
+            body.novelID = data.chapter.novelID;
+            body.chapter = data.chapter.chapter;
+            body.mode = mode;
+            break;
+        default:
+            handler('No Mode');
+            break;
+
+    }
+    body._csrf = data._csrf;
+    sendPost('/publishChapter', body, handler);
+}
+
 module.exports = {
     sendPost,
     sendMultipartPost,
     isDescendent,
+    publishChapter,
 }

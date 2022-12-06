@@ -12,6 +12,13 @@ const editNovelPage = (req, res) => res.render('editNovel');
 
 const editChapterPage = (req, res) => res.render('editChapter');
 
+const viewNovelPage = (req, res) => res.render('viewNovel');
+
+const readNovelPage = (req, res) => res.render('readNovel');
+
+const notFound = (req, res) => res.render('notFound');
+
+
 module.exports = {
   homePage,
   createPage,
@@ -19,4 +26,7 @@ module.exports = {
   profilePage,
   editNovelPage,
   editChapterPage,
+  viewNovelPage,
+  readNovelPage,
+  notFound,
 };

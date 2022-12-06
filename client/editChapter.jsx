@@ -65,6 +65,7 @@ const EditChapterWindow = (props) => {
         }
 
         openModal('publish chapter', (chapterLocation) => {
+            console.log(Chapter);
             const body = {
                 chapterID: Chapter._id,
                 novelID: Chapter.novelID,
@@ -95,6 +96,8 @@ const EditChapterWindow = (props) => {
                     });
                 } else if (pubChapterResponse.error) {
                     console.log('error publishing');
+                    const modal = document.getElementById("modal");
+                    modal.classList.remove('is-active');
                 } else {
                     console.log('published!');
                     const modal = document.getElementById("modal");
