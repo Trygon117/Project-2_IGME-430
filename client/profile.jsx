@@ -1,7 +1,73 @@
+const ProfileWindow = (props) => {
+
+    const activatePremium = async (e) => {
+        console.log('acitvate premium');
+        if (e.currentTarget.innerText === 'Activate Premium') {
+            premiumResponse = await fetch('/activatePremium');
+            const activateResponse = await premiumResponse.json();
+            //console.log(activateResponse);
+        } else {
+            premiumResponse = await fetch('/deactivatePremium');
+            const deactivateResponse = await premiumResponse.json();
+            //console.log(deactivateResponse);
+        }
+        loadButtons();
+    }
+
+    const changePassword = () => {
+        console.log('change password');
+    }
+
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const readableCreatedDate = new Date(props.account.createdDate).toLocaleDateString(undefined, dateOptions);
+
+    return (
+        <div style={{ width: '90vw', margin: 'auto' }}>
+            <h1 className='title'>Profile</h1>
+
+            <h2 className="subtitle">Username: {props.account.username}</h2>
+
+            <h2 className="subtitle">User Id: {props.account._id}</h2>
+
+            <h2 className="subtitle">Account Created: {readableCreatedDate}</h2>
+
+            <div id='buttons' style={{ display: 'flex', flecFlow: 'row', gap: '20px', justifyContent: 'center' }}>
+                <a id='premium-button' className="button is-primary" onClick={activatePremium}>Activate Premium</a>
+                <a id='change-password-button' className="button is-warning" onClick={changePassword}>Change Password</a>
+            </div>
+
+        </div>
+    );
+}
+
+const loadButtons = async () => {
+    const premiumButton = document.getElementById('premium-button');
+
+    premiumResponse = await fetch('/isPremium');
+    const isPremium = await premiumResponse.json();
+
+    if (isPremium) {
+        premiumButton.className = 'button is-danger';
+        premiumButton.innerText = 'Deactivate Premium';
+    } else {
+        premiumButton.className = 'button is-primary';
+        premiumButton.innerText = 'Activate Premium';
+    }
+}
+
 const init = async () => {
     const response = await fetch('/getToken');
     const data = await response.json();
 
+    loggedInAsResponse = await fetch('/getLoggedInAs');
+    myAccount = await loggedInAsResponse.json();
+
+    console.log(myAccount);
+
+    ReactDOM.render(<ProfileWindow account={myAccount} csrf={data.csrfToken} />,
+        document.getElementById('profile-content'));
+
+    loadButtons();
 };
 
 module.exports = {

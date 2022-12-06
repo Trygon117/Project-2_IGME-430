@@ -24,6 +24,13 @@ const router = (app) => {
 
   app.post('/setChapterNumber', mid.requiresLogin, mid.requiresSecure, controllers.Account.setChapterNumber);
 
+  app.get('/activatePremium', mid.requiresLogin, mid.requiresSecure, controllers.Account.activatePremium);
+
+  app.get('/deactivatePremium', mid.requiresLogin, mid.requiresSecure, controllers.Account.deactivatePremium);
+
+  app.get('/isPremium', mid.requiresLogin, mid.requiresSecure, controllers.Account.isPremium);
+
+
   // pages
 
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);

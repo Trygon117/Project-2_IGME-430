@@ -324,6 +324,54 @@ const setChapterNumber = (req, res) => {
   });
 }
 
+const activatePremium = (req, res) => {
+  const session = req.session.account;
+
+  Account.searchByID(req, session._id, async (accountResponse) => {
+    if (accountResponse.error) {
+      return res.status(400).json({ error: accountResponse.error });
+    }
+
+    const newAccount = accountResponse;
+
+    newAccount.premium = true;
+
+    const account = await newAccount.save();
+
+    return res.status(200).json(account);
+  });
+}
+
+const deactivatePremium = (req, res) => {
+  const session = req.session.account;
+
+  Account.searchByID(req, session._id, async (accountResponse) => {
+    if (accountResponse.error) {
+      return res.status(400).json({ error: accountResponse.error });
+    }
+
+    const newAccount = accountResponse;
+
+    newAccount.premium = false;
+
+    const account = await newAccount.save();
+
+    return res.status(200).json(account);
+  });
+}
+
+const isPremium = (req, res) => {
+  const session = req.session.account;
+
+  Account.searchByID(req, session._id, async (accountResponse) => {
+    if (accountResponse.error) {
+      return res.status(400).json({ error: accountResponse.error });
+    }
+
+    return res.status(200).json(accountResponse.premium);
+  });
+}
+
 module.exports = {
   loginPage,
   logout,
@@ -338,4 +386,7 @@ module.exports = {
   getMyLibrary,
   getChapterNumber,
   setChapterNumber,
+  activatePremium,
+  deactivatePremium,
+  isPremium,
 };

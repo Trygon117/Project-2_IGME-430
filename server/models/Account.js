@@ -34,6 +34,11 @@ const AccountSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  premium: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
   library: {
     type: Array,  // an array of maps which are the different shelves
   },
