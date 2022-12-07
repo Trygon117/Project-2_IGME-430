@@ -13,13 +13,13 @@ const ReadNovelWindow = (props) => {
                 </div>
             </div>
 
-            <div id='bannerDiv'></div>
+            <div id='bannerDiv' style={{ width: '100vw', margin: 'auto' }}></div>
         </div>
     );
 }
 
 const AddBanner = (props) => {
-    return (<img src='/assets/img/AddBanner.png'></img>);
+    return (<img src='/assets/img/AddBanner.png' style={{ margin: 'auto' }}></img>);
 }
 
 const Chapter = (props) => {
@@ -104,6 +104,9 @@ const loadAdds = async () => {
             bannerDiv.innerHTML = '';
 
             const addContainer = document.createElement('div');
+            addContainer.style.display = 'flex';
+            addContainer.style.justifyContent = 'center';
+
 
             ReactDOM.render(<AddBanner />,
                 addContainer);
