@@ -230,6 +230,78 @@ const fillPublishModal = (Chapter, csrf) => {
     });
 }
 
+fillChangePasswordModal = () => {
+    const ChangePasswordModal = (props) => {
+
+        const checkNewPasswords = () => {
+            const saveButton = document.getElementById("modal-save-button");
+
+            const newPass1 = document.getElementById('newPass1');
+            const newPass2 = document.getElementById('newPass2');
+
+            const changePassErrorSpan = document.getElementById('change-pass-error-span');
+
+            if (newPass1.value != newPass2.value && newPass2.value !== '') {
+                changePassErrorSpan.innerText = 'New Passwords Must Match';
+                saveButton.disabled = true;
+            } else {
+                changePassErrorSpan.innerText = '';
+                saveButton.disabled = false;
+            }
+        }
+
+        return (
+            <div>
+                <div className='title'>
+                    <h1>Change Password</h1>
+                </div>
+
+                <div className="field">
+                    <label className='label' htmlFor='oldPass'>Password: </label>
+                    <div className='control has-icons-left'>
+                        <input id='oldPass' className='input' type='password' name='oldPass' placeholder=' Old Password' />
+                        <span className="icon is-small is-left">
+                            <i className="fa-solid fa-lock"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div className="field">
+                    <label className='label' htmlFor='newPass1'>New Password: </label>
+                    <div className='control has-icons-left'>
+                        <input id='newPass1' className='input' type='password' name='newPass1' placeholder='Enter New Password' />
+                        <span className="icon is-small is-left">
+                            <i className="fa-solid fa-lock"></i>
+                        </span>
+                    </div>
+                </div >
+
+                <div className="field">
+                    <label className='label' htmlFor='newPass2'>New Password: </label>
+                    <div className='control has-icons-left'>
+                        <input id='newPass2' className='input' type='password' name='newPass2' placeholder='Retype Password' onInput={checkNewPasswords} />
+                        <span className="icon is-small is-left">
+                            <i className="fa-solid fa-lock"></i>
+                        </span>
+                    </div>
+                </div >
+
+                <span id="change-pass-error-span" className='has-text-danger'></span>
+
+            </div >
+        );
+    }
+
+    const modalCardBody = document.getElementById('modal-card-body');
+    const thisDiv = document.createElement('div');
+
+    ReactDOM.render(<ChangePasswordModal />,
+        thisDiv
+    );
+
+    modalCardBody.appendChild(thisDiv);
+}
+
 const openModal = (data, handler) => {
     console.log('data');
     console.log(data);
@@ -243,6 +315,8 @@ const openModal = (data, handler) => {
     modalBody.innerHTML = '';
 
     const saveButton = document.getElementById("modal-save-button");
+    saveButton.disabled = false;
+
     const modalTitle = document.getElementById("modal-title");
 
     switch (modalType) {
@@ -354,12 +428,10 @@ const openModal = (data, handler) => {
             fillPublishModal(data.chapter, data.csrf);
 
             break;
-        case 'unpublishChapter':
-            console.log('unpublish chapter');
-            break;
         case "deleteChapter":
             console.log('delete chapter');
 
+            saveButton.removeEventListener("click", saveEvent);
             const deleteHandler = () => {
                 saveButton.innerText = 'Save';
                 saveButton.className = 'button is-primary';
@@ -369,10 +441,31 @@ const openModal = (data, handler) => {
             saveButton.addEventListener("click", deleteHandler);
             saveButton.innerText = 'Delete';
             saveButton.className = 'button is-danger';
+
             modalTitle.innerHTML = "Delete Chapter";
 
             modalBody.innerText = "Are You Sure you want to delete this chapter?"
 
+            break;
+        case "changePassword":
+            saveButton.disabled = true;
+            saveButton.removeEventListener("click", saveEvent);
+            const changePasswordHandler = () => {
+                const oldPass = document.getElementById('oldPass');
+                const newPass1 = document.getElementById('newPass1');
+                const newPass2 = document.getElementById('newPass2');
+                handler({ oldPass: oldPass.value, newPass1: newPass1.value, newPass2: newPass2.value });
+            }
+            saveEvent = changePasswordHandler;
+            saveButton.addEventListener("click", changePasswordHandler);
+
+            modalTitle.innerHTML = "Change Password";
+
+            fillChangePasswordModal();
+
+            break;
+        default:
+            console.log('no specified modal type'); s
             break;
 
     }

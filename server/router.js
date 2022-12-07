@@ -6,9 +6,12 @@ const router = (app) => {
   app.get('/getToken', mid.requiresSecure, controllers.Account.getToken);
 
   app.get('/login', mid.requiresSecure, mid.requiresLogout, controllers.Account.loginPage);
+
   app.post('/login', mid.requiresSecure, mid.requiresLogout, controllers.Account.login);
 
   app.post('/signup', mid.requiresSecure, mid.requiresLogout, controllers.Account.signup);
+
+  app.post('/changePassword', mid.requiresSecure, mid.requiresLogin, controllers.Account.changePassword);
 
   app.post('/isUsernameAvailable', mid.requiresSecure, mid.requiresLogout, controllers.Account.isUsernameAvailable);
 
@@ -30,7 +33,6 @@ const router = (app) => {
 
   app.get('/isPremium', mid.requiresLogin, mid.requiresSecure, controllers.Account.isPremium);
 
-
   // pages
 
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);
@@ -49,11 +51,11 @@ const router = (app) => {
 
   app.get('/readNovel', mid.requiresSecure, controllers.Pages.readNovelPage);
 
-
   // Novels
   app.post('/createNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.createNovel);
 
-  app.post('/deleteNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.deleteNovel);
+  // app.post('/deleteNovel', mid.requiresLogin,
+  // mid.requiresSecure, controllers.Novels.deleteNovel);
 
   app.post('/editNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.editNovel);
 
@@ -84,7 +86,6 @@ const router = (app) => {
   app.post('/addNovelToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToLibrary);
 
   app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
-
 
   // default
 

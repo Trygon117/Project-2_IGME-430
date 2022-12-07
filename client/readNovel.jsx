@@ -2,12 +2,24 @@ const helper = require('./helper.js');
 
 const ReadNovelWindow = (props) => {
     return (
-        <div style={{ marginLeft: '20px', marginRight: '20px', marginTop: '20px' }}>
-            <div id='chapter-content' style={{ border: 'solid thick', minHeight: '80vh', padding: '20px', maxWidth: '1000px', margin: 'auto' }}>
+        <div>
 
+            <div id='bannerDiv'></div>
+
+            <div style={{ margin: '20px' }}>
+
+                <div id='chapter-content' style={{ border: 'solid thick', minHeight: '80vh', padding: '20px', maxWidth: '1000px', margin: 'auto' }}>
+
+                </div>
             </div>
+
+            <div id='bannerDiv'></div>
         </div>
     );
+}
+
+const AddBanner = (props) => {
+    return (<img src='/assets/img/AddBanner.png'></img>);
 }
 
 const Chapter = (props) => {
@@ -20,6 +32,7 @@ const Chapter = (props) => {
                 console.log(response.error);
             } else {
                 loadChapter(props.csrf)
+                loadAdds();
             }
         });
     }
@@ -31,7 +44,8 @@ const Chapter = (props) => {
             } else if (response.error) {
                 console.log(response.error);
             } else {
-                loadChapter(props.csrf)
+                loadChapter(props.csrf);
+                loadAdds();
             }
         });
     }
@@ -50,12 +64,15 @@ const Chapter = (props) => {
     );
 }
 
-const loadChapter = (csrf) => {
+const loadChapter = async (csrf) => {
     const novelID = localStorage.getItem('partchment-readNovel');
-    helper.sendPost('/getChapterNumber', { novelID, _csrf: csrf }, (chapterNumber) => {
+    await helper.sendPost('/getChapterNumber', { novelID, _csrf: csrf }, (chapterNumber) => {
         console.log(chapterNumber);
         helper.sendPost('/searchChapterNumber', { novelID, chapterNumber, _csrf: csrf }, (chapterResponse) => {
+
+            console.log('chapterResponse');
             console.log(chapterResponse);
+
             const chapterContent = document.getElementById('chapter-content');
             chapterContent.innerHTML = '';
 
@@ -73,6 +90,30 @@ const loadChapter = (csrf) => {
     });
 }
 
+const loadAdds = async () => {
+    const response = await fetch('/getLoggedInAs');
+    const account = await response.json();
+
+    console.log('account');
+    console.log(account);
+
+    if (account.premium) {
+
+    } else {
+        document.querySelectorAll('#bannerDiv').forEach((bannerDiv) => {
+            bannerDiv.innerHTML = '';
+
+            const addContainer = document.createElement('div');
+
+            ReactDOM.render(<AddBanner />,
+                addContainer);
+
+            bannerDiv.appendChild(addContainer);
+        });
+
+    }
+}
+
 const init = async () => {
     const response = await fetch('/getToken');
     const data = await response.json();
@@ -82,8 +123,9 @@ const init = async () => {
     ReactDOM.render(<ReadNovelWindow csrf={data.csrfToken} />,
         document.getElementById('read-novel-content'));
 
-    loadChapter(data.csrfToken);
+    await loadChapter(data.csrfToken);
 
+    await loadAdds();
 };
 
 module.exports = {

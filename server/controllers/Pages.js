@@ -1,5 +1,3 @@
-const models = require('../models');
-
 const homePage = (req, res) => res.render('home');
 
 const createPage = (req, res) => res.render('create');
@@ -17,7 +15,6 @@ const viewNovelPage = (req, res) => res.render('viewNovel');
 const readNovelPage = (req, res) => res.render('readNovel');
 
 const notFound = (req, res) => res.render('notFound');
-
 
 module.exports = {
   homePage,

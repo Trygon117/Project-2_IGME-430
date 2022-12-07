@@ -1,27 +1,11 @@
-/* This file defines our schema and model interface for the account data.
-
-   We first import bcrypt and mongoose into the file. bcrypt is an industry
-   standard tool for encrypting passwords. Mongoose is our tool for
-   interacting with our mongo database.
-*/
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const Novel = require('./Novel.js');
 
-/* When generating a password hash, bcrypt (and most other password hash
-   functions) use a "salt". The salt is simply extra data that gets hashed
-   along with the password. The addition of the salt makes it more difficult
-   for people to decrypt the passwords stored in our database. saltRounds
-   essentially defines the number of times we will hash the password and salt.
-*/
 const saltRounds = 10;
 
 let AccountModel = {};
 
-/* Our schema defines the data we will store. A username (string of alphanumeric
-   characters), a password (actually the hashed version of the password created
-   by bcrypt), and the created date.
-*/
 const AccountSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -40,7 +24,7 @@ const AccountSchema = new mongoose.Schema({
     default: false,
   },
   library: {
-    type: Array,  // an array of maps which are the different shelves
+    type: Array, // an array of maps which are the different shelves
   },
   chapters: { // A map with the id of the novel as the key and a chapter number as a value
     type: Map,
@@ -60,13 +44,6 @@ AccountSchema.statics.toAPI = (doc) => ({
 // Helper function to hash a password
 AccountSchema.statics.generateHash = (password) => bcrypt.hash(password, saltRounds);
 
-/* Helper function for authenticating a password against one already in the
-   database. Essentially when a user logs in, we need to verify that the password
-   they entered matches the one in the database. Since the database stores hashed
-   passwords, we need to get the hash they have stored. We then pass the given password
-   and hashed password to bcrypt's compare function. The compare function hashes the
-   given password the same number of times as the stored password and compares the result.
-*/
 AccountSchema.statics.authenticate = async (username, password, callback) => {
   try {
     const doc = await AccountModel.findOne({ username }).exec();
@@ -90,7 +67,7 @@ AccountModel = mongoose.model('Account', AccountSchema);
 
 // find a single account by its _id
 const searchByID = async (req, userID, handler) => {
-  const sessionUsername = req.session.account.username;
+  const session = req.session.account;
 
   await AccountModel.findById(userID, (err, doc) => {
     if (err) {
@@ -101,24 +78,31 @@ const searchByID = async (req, userID, handler) => {
     }
 
     if (doc === null) {
-      handler({ error: "No Account Found" });
+      handler({ error: 'No Account Found' });
       return;
     }
 
     let user = doc;
 
+    // console.log('doc');
+    // console.log(doc);
+
+    // console.log('session');
+    // console.log(session);
+
     // hide some information about users from others
-    if (doc._id != userID || sessionUsername != doc.username) {
+    if (session._id.toString() !== doc._id.toString()) {
+      console.log('hiding account info');
       user = { username: doc.username, library: doc.library };
     }
 
+    user.password = 'Nice Try!';
+
     handler(user);
-    return;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 
@@ -139,13 +123,13 @@ const searchByCriteria = async (req, userFilters, handler) => {
     const users = {};
 
     // hide information about novels the user isn't allowed to access
-    docs.forEach(user => {
-
-      console.log()
-      if (session._id != user._id || session.username != user.username) {
+    docs.forEach((user) => {
+      console.log();
+      if (session._id !== user._id || session.username !== user.username) {
         users[user.username] = { username: user.username, library: user.library };
       } else {
         users[user.username] = user;
+        users[user.username].password = 'Nice Try!';
       }
     });
 
@@ -158,19 +142,15 @@ const searchByCriteria = async (req, userFilters, handler) => {
     console.log('found users');
 
     handler(users);
-    return
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 
 // update the content of a specific account
 const updateAccountByID = async (req, updates, handler) => {
-  const sessionUsername = req.session.account.username;
-
   await AccountModel.findById(updates.userID, async (err, user) => {
     if (err) {
       console.log('an error');
@@ -184,88 +164,118 @@ const updateAccountByID = async (req, updates, handler) => {
       return;
     }
 
+    // console.log('user');
+    // console.log(user);
+    // console.log(user._id);
+    // console.log(req.session.account._id);
+
     // You can only update novels that you are the author of
-    if (user._id != updates.userID) {
-      handler({ error: "User does not have permission to edit the data of this novel " });
+    if (user._id.toString() !== req.session.account._id) {
+      handler({ error: 'User does not have permission to edit the data of this Account' });
       return;
     }
 
-    Object.entries(updates).forEach(entry => {
+    const updatedUser = user;
+
+    Object.entries(updates).forEach((entry) => {
       const [key, value] = entry;
       switch (key) {
         case 'username':
-          user.username = value;
+          updatedUser.username = value;
           break;
         case 'password':
-          user.password = value;
+          updatedUser.password = value;
           break;
         case 'library':
-          user.library = value;
+          updatedUser.library = value;
+          break;
+        case 'chapters':
+          updatedUser.chapters = value;
           break;
         default:
           break;
       }
     });
 
+    const result = await updatedUser.save();
 
-    result = await user.save();
-
+    result.password = 'Nice Try!';
 
     handler(result);
-    return;
-
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 
-const updateLibrary = async (req) => {
+const updateLibrary = async (req, handler) => {
+  console.log('update library');
 
   const session = req.session.account;
 
-  await AccountModel.findById(session._id, async (err, user) => {
+  return AccountModel.findById(session._id, async (err, user) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      handler({ error: 'An error has occurred' });
-      return;
+      return { error: 'An error has occurred' };
     }
 
-    console.log(user);
+    // console.log('user');
+    // console.log(user);
 
-    const library = [];
+    // unfortunatly we have to load all novels because we are only allowed to use for each loops
+    const allNovels = await Novel.NovelModel.find();
 
-    for (const shelf of user.library) {
+    // console.log('allNovels');
+    // console.log(allNovels);
+
+    let userLibrary = user.library;
+    if (userLibrary === undefined) {
+      userLibrary = [];
+    }
+
+    const newLibrary = [];
+
+    userLibrary.forEach((shelf) => {
       const newShelf = {};
-      for (const key of Object.keys(shelf)) {
+
+      Object.keys(shelf).forEach(async (key) => {
         if (key === 'title') {
           newShelf[key] = shelf[key];
-          continue;
+        } else {
+          allNovels.forEach((novel) => {
+            if (novel._id.toString() === key) {
+              // console.log('novel');
+              // console.log(novel);
+              newShelf[key] = novel;
+            }
+          });
         }
-        await Novel.searchByID(req, key, (response) => {
-          if (!response.error) {
-            newShelf[key] = response;
-          }
-        });
-      }
-      library.unshift(newShelf);
-    }
+      });
+
+      // console.log('newShelf');
+      // console.log(newShelf);
+
+      newLibrary.unshift(newShelf);
+    });
+
+    // console.log('library');
+    // console.log(library);
 
     const updatedUser = user;
-    updatedUser.library = library;
+    updatedUser.library = newLibrary;
     updatedUser.save();
 
+    // console.log(updatedUser);
+
+    return handler();
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    handler({ error: 'An error has occurred' });
-    return;
+    return { error: 'An error has occurred' };
   });
-}
-
+};
 
 module.exports = {
   AccountModel,
@@ -274,4 +284,3 @@ module.exports = {
   updateAccountByID,
   updateLibrary,
 };
-

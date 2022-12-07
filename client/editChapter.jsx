@@ -177,12 +177,12 @@ const EditChapterWindow = (props) => {
 
         // if this is the first thing being typed, then we need to add the correct styling
         if (editableDocument.innerText.length <= 1) {
-            const fontDrop = document.getElementById('font-drop-text');
-            const textSizeInput = document.getElementById('text-size');
+            //const fontDrop = document.getElementById('font-drop-text');
+            //const textSizeInput = document.getElementById('text-size');
 
             const defaultSpan = document.createElement('span');
-            defaultSpan.classList.add(`${fontDrop.getAttribute('data-font')}-font-span`);
-            defaultSpan.classList.add(`font-size-${textSizeInput.value}-span`);
+            defaultSpan.classList.add(`georgia-font-span`);
+            defaultSpan.classList.add(`font-size-20-span`);
             // defaultSpan.className = 'default-font-span font-size-default-span';
             defaultSpan.innerText = editableDocument.innerText;
             editableDocument.innerHTML = "";
@@ -1506,7 +1506,7 @@ const EditChapterWindow = (props) => {
                         <a id='underline-button' className='button is-outlined' onClick={setUnderline}><i className="fa-solid fa-underline"></i></a>
                     </span>
 
-                    <span className='dropdown' onClick={(e) => { e.currentTarget.classList.toggle('is-active') }}>
+                    {/* <span className='dropdown' onClick={(e) => { e.currentTarget.classList.toggle('is-active') }}>
                         <div className="dropdown-trigger">
                             <button className="button" aria-haspopup="true" aria-controls="dropdown-menu">
                                 <span id='font-drop-text' className='georgia-font-span' data-font='georgia' style={{ width: '120px', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis' }}>Georgia</span>
@@ -1528,15 +1528,15 @@ const EditChapterWindow = (props) => {
                                 </a>
                             </div>
                         </div>
-                    </span>
+                    </span> */}
 
-                    <span style={{ display: 'flex', border: 'ridge thin' }}>
+                    {/* <span style={{ display: 'flex', border: 'ridge thin' }}>
                         <a className='button is-white' onClick={decreaseTextSize} style={{ height: '38px' }}><i className="fa-solid fa-minus" /></a>
                         <input id="text-size" className='input' type="number" name="text-size" defaultValue='20' min="0" max="100" onBlur={updateTextSize} style={{ width: '70px', height: '38px' }} />
                         <a className='button is-white' onClick={increaseTextSize} style={{ height: '38px' }}><i className="fa-solid fa-plus" /></a>
-                    </span>
+                    </span> */}
 
-                    <span style={{ textAlign: 'center' }}>
+                    {/* <span style={{ textAlign: 'center' }}>
                         <a id='left-align-button' className='button is-dark' onClick={setLeftAlign}><i className="fa-solid fa-align-left"></i></a>
                     </span>
 
@@ -1546,7 +1546,7 @@ const EditChapterWindow = (props) => {
 
                     <span style={{ textAlign: 'center' }}>
                         <a id='right-align-button' className='button is-outlined' onClick={setRightAlign}><i className="fa-solid fa-align-right"></i></a>
-                    </span>
+                    </span> */}
 
                 </div>
             </div>

@@ -132,7 +132,7 @@ const loadButtons = async (novelID) => {
     // check if the novel is in this array
     for (const id of Object.keys(myLibrary[0])) {
         //console.log(id);
-        if (id === novelID) {
+        if (id.toString() === novelID) {
             novelInLibrary = true;
         }
     }
@@ -184,6 +184,9 @@ const init = async () => {
 
     novelID = localStorage.getItem('partchment-viewNovelID');
 
+    console.log('novelID');
+    console.log(novelID);
+
     if (!novelID) {
         window.location = '/';
     }
@@ -193,9 +196,9 @@ const init = async () => {
 
         ReactDOM.render(<NovelWindow novel={response.novel} csrf={data.csrfToken} />,
             document.getElementById('view-novel-content'));
-    });
 
-    loadButtons(novelID);
+        loadButtons(novelID);
+    });
 };
 
 module.exports = {

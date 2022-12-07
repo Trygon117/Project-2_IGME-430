@@ -55,13 +55,15 @@ const NovelCard = (props) => {
         console.log(`Card clicked: ${e.currentTarget}`);
         //console.log(props);
 
-        localStorage.setItem('partchment-viewNovelID', novel._id);
+        const novelID = e.currentTarget.getAttribute('data-card-id');
+
+        localStorage.setItem('partchment-viewNovelID', novelID);
         localStorage.setItem('partchment-viewNovelBack', '/library');
         window.location.assign('/viewNovel');
     };
 
     return (
-        <div className='novel-card' data-card-number={props.n} style={{ width: 150, position: 'absolute', bottom: '0px', left: `${leftOffset}px` }} onMouseEnter={hoverOnCard} onMouseLeave={hoverOffCard} onClick={clickCard}>
+        <div className='novel-card' data-card-number={props.n} data-card-id={props.novel._id} style={{ width: 150, position: 'absolute', bottom: '0px', left: `${leftOffset}px` }} onMouseEnter={hoverOnCard} onMouseLeave={hoverOffCard} onClick={clickCard}>
             <div className="card" >
                 <div className="card-image">
                     <figure className="image is-2by3">

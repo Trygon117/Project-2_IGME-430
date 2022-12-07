@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const models = require('.');
+
 let NovelModel = {};
 
 const NovelSchema = new mongoose.Schema({
@@ -30,7 +32,7 @@ const NovelSchema = new mongoose.Schema({
   abstract: {
     type: String,
     trim: true,
-    default: "No Content Yet...",
+    default: 'No Content Yet...',
     required: true,
 
   },
@@ -97,24 +99,22 @@ const searchByID = async (req, novelID, handler) => {
     }
 
     if (doc === null) {
-      handler({ error: "No Novel Found" });
+      handler({ error: 'No Novel Found' });
       return;
     }
 
     let novel = doc;
 
     // hide information about novels the user isn't allowed to access
-    if (!doc.published && doc.author != sessionUsername) {
+    if (!doc.published && doc.author !== sessionUsername) {
       novel = { published: false };
     }
 
     handler(novel);
-    return;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 
@@ -133,8 +133,8 @@ const searchByCriteria = async (req, novelFilters, handler) => {
     const novels = {};
 
     // hide information about novels the user isn't allowed to access
-    docs.forEach(novel => {
-      if (!novel.published && novel.author != sessionUsername) {
+    docs.forEach((novel) => {
+      if (!novel.published && novel.author !== sessionUsername) {
         novels[novel.title] = { published: false };
       } else {
         novels[novel.title] = novel;
@@ -153,21 +153,18 @@ const searchByCriteria = async (req, novelFilters, handler) => {
     console.log('found novels');
 
     handler({ novels });
-    return
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
-
 
 // update the content of a specific novel
 const updateNovelByID = async (req, updates, handler) => {
   const sessionUsername = req.session.account.username;
 
-  //console.log(updates);
+  // console.log(updates);
 
   await NovelModel.findById(updates.novelID, async (err, novel) => {
     if (err) {
@@ -186,46 +183,48 @@ const updateNovelByID = async (req, updates, handler) => {
     }
 
     // You can only update novels that you are the author of
-    if (!novel.published && novel.author != sessionUsername) {
-      handler({ error: "User does not have permission to edit the data of this novel " });
+    if (!novel.published && novel.author !== sessionUsername) {
+      handler({ error: 'User does not have permission to edit the data of this novel ' });
       return;
     }
 
-    Object.entries(updates).forEach(entry => {
+    const updateNovel = novel;
+
+    Object.entries(updates).forEach((entry) => {
       const [key, value] = entry;
       switch (key) {
-        case "title":
-          novel.title = value;
+        case 'title':
+          updateNovel.title = value;
           break;
-        case "author":
-          novel.author = value;
+        case 'author':
+          updateNovel.author = value;
           break;
-        case "cover":
-          novel.cover = value;
+        case 'cover':
+          updateNovel.cover = value;
           break;
-        case "coverName":
-          novel.coverName = value;
+        case 'coverName':
+          updateNovel.coverName = value;
           break;
-        case "coverMime":
-          novel.coverMime = value;
+        case 'coverMime':
+          updateNovel.coverMime = value;
           break;
-        case "abstract":
-          novel.abstract = value;
+        case 'abstract':
+          updateNovel.abstract = value;
           break;
-        case "chapters":
-          novel.chapters = value;
+        case 'chapters':
+          updateNovel.chapters = value;
           break;
         case 'publishedChapterCount':
-          novel.publishedChapterCount = value;
+          updateNovel.publishedChapterCount = value;
           break;
         case 'totalChapterCount':
-          novel.totalChapterCount = value;
+          updateNovel.totalChapterCount = value;
           break;
-        case "published":
-          novel.published = value;
+        case 'published':
+          updateNovel.published = value;
           break;
-        case "publicationDate":
-          novel.publicationDate = value;
+        case 'publicationDate':
+          updateNovel.publicationDate = value;
           break;
         default:
           break;
@@ -238,48 +237,50 @@ const updateNovelByID = async (req, updates, handler) => {
       let totalChapters = 0;
 
       // count the chapters
-      for (const [key, value] of novel.chapters) {
+      Object.keys(novel.chapters).forEach((key) => {
         if (key.includes('chapter-')) {
           publishedChapters++;
         }
         totalChapters++;
-      }
+      });
 
-      novel.publishedChapterCount = publishedChapters;
-      novel.totalChapterCount = totalChapters;
+      updateNovel.publishedChapterCount = publishedChapters;
+      updateNovel.totalChapterCount = totalChapters;
     }
 
-    result = await novel.save();
+    const result = await updateNovel.save();
 
-    handler(result);
-
+    await models.Account.updateLibrary(req, () => {
+      handler(result);
+    });
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    novelReponse = { error: 'An error has occurred' };
-    return;
+    return { error: 'An error has occurred' };
   });
 };
 
 // sends an array of all the novels to the handler function (potentially laggy id too many novels)
 const getAllNovels = async (handler) => {
-  const novels = [];
-  for await (const novel of NovelModel.find()) {
-    // console.log('novel');
-    // console.log(novel);
-    novels.unshift(novel);
-  }
+  const novels = await NovelModel.find();
+
+  // for await (const novel of NovelModel.find()) {
+  //   // console.log('novel');
+  //   // console.log(novel);
+  //   novels.unshift(novel);
+  // }
+
   // console.log('novels');
   // console.log(novels);
   handler(novels);
-}
+};
 
 // sends every novel individually to the handler function
-const iterateAllNovels = async (handler) => {
-  for await (const novel of NovelModel.find()) {
-    handler(novel);
-  }
-}
+// const iterateAllNovels = async (handler) => {
+//   for await (const novel of NovelModel.find()) {
+//     handler(novel);
+//   }
+// };
 
 module.exports = {
   NovelModel,
@@ -287,5 +288,5 @@ module.exports = {
   searchByCriteria,
   updateNovelByID,
   getAllNovels,
-  iterateAllNovels,
+  // iterateAllNovels,
 };

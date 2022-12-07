@@ -1,4 +1,3 @@
-const e = require('express');
 const models = require('../models');
 
 const { Account } = models;
@@ -6,7 +5,7 @@ const { Novel } = models;
 
 const loginPage = (req, res) => {
   const csrfToken = req.csrfToken();
-  //console.log(`Login Page csrf: ${csrfToken}`);
+  // console.log(`Login Page csrf: ${csrfToken}`);
   res.render('login', { csrfToken });
 };
 
@@ -62,6 +61,38 @@ const signup = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  const oldPass = `${req.body.oldPass}`;
+  const newPass1 = `${req.body.newPass1}`;
+  const newPass2 = `${req.body.newPass2}`;
+
+  if (newPass1 !== newPass2) {
+    return res.status(400).json({ error: 'New passwords do not match!' });
+  }
+
+  return Account.AccountModel.authenticate(
+    req.session.account.username,
+    oldPass,
+    async (error, account) => {
+      if (error || !account) {
+        return res.status(401).json({ error: 'Wrong Username or password!' });
+      }
+
+      try {
+        const hash = await Account.AccountModel.generateHash(newPass1);
+        const updatedAccount = account;
+        updatedAccount.password = hash;
+        updatedAccount.save();
+        req.session.account = Account.AccountModel.toAPI(updatedAccount);
+        return res.status(200).json({ message: 'success' });
+      } catch (err) {
+        console.log(err);
+        return res.status(400).json({ error: 'An error has occurred' });
+      }
+    },
+  );
+};
+
 const isUsernameAvailable = async (req, res) => {
   const user = await Account.AccountModel.findOne({ username: req.body.username });
   if (user) {
@@ -81,10 +112,11 @@ const isLoggedIn = (req, res) => {
 const getLoggedInAs = (req, res) => {
   console.log('Get Logged In As');
 
-  //console.log(req.session.account._id);
+  // console.log(req.session.account._id);
 
   Account.searchByID(req, req.session.account._id, (response) => {
     if (response.error) {
+      console.log(response.error);
       return res.status(400).json(response.error);
     }
     return res.status(200).json(response);
@@ -93,14 +125,14 @@ const getLoggedInAs = (req, res) => {
 
 const getToken = (req, res) => {
   const csrfToken = req.csrfToken();
-  //console.log(`Get Token csrf: ${csrfToken}`);
+  // console.log(`Get Token csrf: ${csrfToken}`);
   return res.json({ csrfToken });
 };
 
 // add a novel to the users account
 const addNovelToLibrary = async (req, res) => {
   console.log('add novel to library');
-  const novelID = req.body.novelID;
+  const { novelID } = req.body;
 
   // console.log('given info');
   // console.log(req.body);
@@ -109,7 +141,7 @@ const addNovelToLibrary = async (req, res) => {
     // console.log('accountResponse');
     // console.log(accountResponse);
 
-    const library = accountResponse.library;
+    const { library } = accountResponse;
     let mainShelf;
 
     if (!accountResponse.library || accountResponse.library.length === 0) {
@@ -123,12 +155,12 @@ const addNovelToLibrary = async (req, res) => {
     // console.log('mainShelf');
     // console.log(mainShelf);
 
-    models.Novel.searchByID(req, novelID, (novelResponse) => {
-
+    return models.Novel.searchByID(req, novelID, (novelResponse) => {
       // console.log('novelResponse');
       // console.log(novelResponse);
 
       if (novelResponse.error) {
+        // console.log(novelResponse.error);
         return res.status(400).json(novelResponse.error);
       }
 
@@ -140,18 +172,25 @@ const addNovelToLibrary = async (req, res) => {
 
       library.unshift(mainShelf);
 
+      // console.log('library');
       // console.log(library);
 
-      const updates = { userID: req.session.account._id, library }
+      // console.log(req.session.account._id);
 
-      Account.updateAccountByID(req, updates, (updateResponse) => {
+      const updates = { userID: req.session.account._id, library };
+
+      return Account.updateAccountByID(req, updates, (updateResponse) => {
         // console.log('updateResponse');
         // console.log(updateResponse);
         if (updateResponse.error) {
+          // console.log(updateResponse.error);
           return res.status(400).json(updateResponse.error);
         }
 
-        res.json({ updateResponse });
+        // console.log('updateResponse');
+        // console.log(updateResponse);
+
+        return res.json({ updateResponse });
       });
     });
   });
@@ -159,13 +198,17 @@ const addNovelToLibrary = async (req, res) => {
 
 const removeNovelFromLibrary = (req, res) => {
   console.log('remove novel from library');
-  const novelID = req.body.novelID;
+  const { novelID } = req.body;
 
-  Account.searchByID(req, req.body.userID, (response) => {
-    console.log('response');
-    console.log(response);
+  return Account.searchByID(req, req.session.account._id, (response) => {
+    if (response.error) {
+      console.log(response.error);
+      return res.status(400).json({ error: response.error });
+    }
+    // console.log('response');
+    // console.log(response);
 
-    const library = response.library;
+    const { library } = response;
     let mainShelf;
 
     if (!response.library || response.library.length === 0) {
@@ -180,47 +223,42 @@ const removeNovelFromLibrary = (req, res) => {
     console.log(Object.keys(mainShelf));
 
     // check if the novel is in the library
-    for (const key of Object.keys(mainShelf)) {
+    Object.keys(mainShelf).forEach((key) => {
       if (key === novelID) {
         // delete the novel from the library
         delete mainShelf[key];
       }
-    }
+    });
 
     library.unshift(mainShelf);
 
-    const updates = { userID: req.body.userID, library }
+    const updates = { userID: req.session.account._id, library };
 
-    Account.updateAccountByID(req, updates, (updateResponse) => {
-      console.log('updateResponse');
-      console.log(updateResponse);
+    return Account.updateAccountByID(req, updates, (updateResponse) => {
+      if (updateResponse.error) {
+        console.log(updateResponse.errror);
+        return res.status(400).json({ error: updateResponse.error });
+      }
+
+      // console.log('updateResponse');
+      // console.log(updateResponse);
+
       if (updateResponse.error) {
         return res.status(400).json(updateResponse.error);
       }
 
-      res.json({ updateResponse });
-
-
-      models.Novel.searchByID(req, novelID, (novelResponse) => {
-
-        if (novelResponse.error) {
-          return res.status(400).json(novelResponse.error);
-        }
-
-      });
+      return res.json({ updateResponse });
     });
   });
-}
+};
 
 const getMyLibrary = async (req, res) => {
   console.log('getLibrary');
 
-  await Account.updateLibrary(req);
-
   const session = req.session.account;
-  //console.log(session);
+  // console.log(session);
 
-  Account.searchByID(req, session._id, (response) => {
+  return Account.searchByID(req, session._id, (response) => {
     // console.log('response');
     // console.log(response);
 
@@ -228,12 +266,12 @@ const getMyLibrary = async (req, res) => {
       return res.status(400).json(response.error);
     }
 
-    res.status(200).json(response.library);
+    return res.status(200).json(response.library);
   });
-}
+};
 
 const getChapterNumber = (req, res) => {
-  console.log('get chapter');
+  console.log('get chapter number');
 
   const session = req.session.account;
 
@@ -241,34 +279,65 @@ const getChapterNumber = (req, res) => {
     return res.status(400).json({ error: 'Missing Novel ID' });
   }
 
-  Account.searchByID(req, session._id, async (response) => {
-    if (response.error) {
-      return res.status(400).json({ error: response.error });
+  return Account.searchByID(req, session._id, async (account) => {
+    if (account.error) {
+      // console.log(account.error);
+      return res.status(400).json({ error: account.error });
     }
 
-    if (response.chapters) {
-      const chapterNumber = response.chapters.get(req.body.novelID);
-      if (chapterNumber === null) {
-        const newAccount = response;
-        let chapters = response.chapters;
+    // console.log('account');
+    // console.log(account);
+
+    const accountUpdates = { userID: session._id };
+
+    let chapterNumber = 0;
+
+    // console.log(account.chapters);
+
+    if (account.chapters !== undefined) {
+      // console.log('account.chapters exists');
+      chapterNumber = await account.chapters.get(req.body.novelID);
+
+      // console.log(chapterNumber);
+
+      // if the chapterNumber for this novel is null
+      if (chapterNumber === undefined) {
+        // console.log('chapter number is null for this novel');
+        // create a chapterNumber for this novel
+
+        const { chapters } = account;
         chapters.set(req.body.novelID, 0);
-        newAccount.chapters = chapters;
-        await newAccount.save();
+
+        // console.log('chapters');
+        // console.log(chapters);
+
+        accountUpdates.chapters = chapters;
+
+        chapterNumber = 0;
+      } else {
+        return res.status(200).json(chapterNumber);
       }
-      return res.status(200).json(chapterNumber);
     } else {
-      const newAccount = response;
-      let chapters;
-      chapters = new Map();
+      // create a new map and set this novels chapter to 0
+
+      const chapters = new Map();
       chapters.set(req.body.novelID, 0);
-      newAccount.chapters = chapters;
-      await newAccount.save();
 
-      return res.status(200).json(0);
+      accountUpdates.chapters = chapters;
     }
-  });
-}
 
+    // console.log('updating account');
+
+    return Account.updateAccountByID(req, accountUpdates, (accountUpdate) => {
+      if (accountUpdate.error) {
+        console.log(accountUpdate.error);
+        return res.status(400).json({ error: accountUpdate.error });
+      }
+      // console.log('returning chapter number: ', chapterNumber);
+      return res.status(200).json(chapterNumber);
+    });
+  });
+};
 
 const setChapterNumber = (req, res) => {
   console.log('set chapter number');
@@ -283,12 +352,12 @@ const setChapterNumber = (req, res) => {
     return res.status(400).json({ error: 'Missing chapterNumber' });
   }
 
-  Account.searchByID(req, session._id, async (accountResponse) => {
+  return Account.searchByID(req, session._id, async (accountResponse) => {
     if (accountResponse.error) {
       return res.status(400).json({ error: accountResponse.error });
     }
 
-    Novel.searchByID(req, req.body.novelID, async (response) => {
+    return Novel.searchByID(req, req.body.novelID, async (response) => {
       if (response.error) {
         return res.status(400).json({ error: response.error });
       }
@@ -304,25 +373,30 @@ const setChapterNumber = (req, res) => {
       const newAccount = accountResponse;
       let chapters;
 
-      if (response.chapters) {
+      // console.log(accountResponse);
+      // console.log(accountResponse.chapters);
+
+      if (accountResponse.chapters !== undefined) {
         chapters = accountResponse.chapters;
       } else {
+        console.log('creating map');
         chapters = new Map();
       }
+
+      // console.log(chapters);
 
       chapters.set(req.body.novelID, req.body.chapterNumber);
 
       newAccount.chapters = chapters;
 
-      console.log(newAccount);
+      // console.log(newAccount);
 
-      account = await newAccount.save();
+      const account = await newAccount.save();
 
-      res.status(200).json(account);
-
+      return res.status(200).json(account);
     });
   });
-}
+};
 
 const activatePremium = (req, res) => {
   const session = req.session.account;
@@ -340,7 +414,7 @@ const activatePremium = (req, res) => {
 
     return res.status(200).json(account);
   });
-}
+};
 
 const deactivatePremium = (req, res) => {
   const session = req.session.account;
@@ -358,7 +432,7 @@ const deactivatePremium = (req, res) => {
 
     return res.status(200).json(account);
   });
-}
+};
 
 const isPremium = (req, res) => {
   const session = req.session.account;
@@ -370,13 +444,14 @@ const isPremium = (req, res) => {
 
     return res.status(200).json(accountResponse.premium);
   });
-}
+};
 
 module.exports = {
   loginPage,
   logout,
   login,
   signup,
+  changePassword,
   getToken,
   isUsernameAvailable,
   isLoggedIn,

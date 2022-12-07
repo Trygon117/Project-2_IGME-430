@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const models = require('.');
 
 let ChapterModel = {};
 
@@ -6,7 +7,7 @@ const ChapterSchema = new mongoose.Schema({
   title: {
     type: String,
     trim: true,
-    default: "Untitled",
+    default: 'Untitled',
   },
   author: {
     type: String,
@@ -76,24 +77,22 @@ const searchByID = async (req, chapterID, handler) => {
     }
 
     if (doc === null) {
-      handler({ error: "No Chapter Found" });
+      handler({ error: 'No Chapter Found' });
       return;
     }
 
     let chapter = doc;
 
     // hide information about novels the user isn't allowed to access
-    if (!doc.published && doc.author != sessionUsername) {
+    if (!doc.published && doc.author !== sessionUsername) {
       chapter = { published: false };
     }
 
     handler(chapter);
-    return;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 
@@ -112,8 +111,8 @@ const searchByCriteria = async (req, chapterFilters, handler) => {
     const chapters = {};
 
     // hide information about novels the user isn't allowed to access
-    docs.forEach(chapter => {
-      if (!chapter.published && chapter.author != sessionUsername) {
+    docs.forEach((chapter) => {
+      if (!chapter.published && chapter.author !== sessionUsername) {
         chapters[chapter.title] = { published: false };
       } else {
         chapters[chapter.title] = chapter;
@@ -132,12 +131,10 @@ const searchByCriteria = async (req, chapterFilters, handler) => {
     console.log('found chapters');
 
     handler(chapters);
-    return
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 
@@ -159,43 +156,39 @@ const updateChapterByID = async (req, updates, handler) => {
     }
 
     // You can only update novels that you are the author of
-    if (!chapter.published && chapter.author != sessionUsername) {
-      handler({ error: "User does not have permission to edit the data of this novel " });
+    if (!chapter.published && chapter.author !== sessionUsername) {
+      handler({ error: 'User does not have permission to edit the data of this novel ' });
       return;
     }
 
-    // console.log('OG chapter');
-    // console.log(chapter);
+    const updateChapter = chapter;
 
-    // console.log('updates');
-    // console.log(updates);
-
-    Object.entries(updates).forEach(entry => {
+    Object.entries(updates).forEach((entry) => {
       const [key, value] = entry;
       switch (key) {
-        case "title":
-          chapter.title = value;
+        case 'title':
+          updateChapter.title = value;
           break;
-        case "author":
-          chapter.author = value;
+        case 'author':
+          updateChapter.author = value;
           break;
-        case "novelID":
-          chapter.novelID = value;
+        case 'novelID':
+          updateChapter.novelID = value;
           break;
-        case "chapter":
-          chapter.chapter = value;
+        case 'chapter':
+          updateChapter.chapter = value;
           break;
-        case "chapterNumber":
-          chapter.chapterNumber = value;
+        case 'chapterNumber':
+          updateChapter.chapterNumber = value;
           break;
-        case "content":
-          chapter.content = value;
+        case 'content':
+          updateChapter.content = value;
           break;
-        case "published":
-          chapter.published = value;
+        case 'published':
+          updateChapter.published = value;
           break;
-        case "views":
-          chapter.views = value;
+        case 'views':
+          updateChapter.views = value;
           break;
         default:
           break;
@@ -205,17 +198,15 @@ const updateChapterByID = async (req, updates, handler) => {
     // console.log('chapter');
     // console.log(chapter);
 
-    result = await chapter.save();
-    //console.log("updated");
-    //console.log(result);
-    handler(result);
-    return;
+    const result = await updateChapter.save();
 
+    await models.Account.updateLibrary(req, () => {
+      handler(result);
+    });
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
-    return;
   });
 };
 

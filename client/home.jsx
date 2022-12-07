@@ -106,17 +106,17 @@ const NovelCard = (props) => {
             <div className='column is-four-fifths'>
                 <a><h1 className='title'>{novel.title}</h1></a>
                 <h2 className='subtitle'>By {novel.author}</h2>
-                <p style={{ overflow: 'hidden', textOverflow: 'auto', height: 'calc((80vw * .333) - 150px)' }}>"{novel.abstract}"</p>
+                <p style={{ overflow: 'hidden', textOverflow: 'auto', height: 'calc((80vw * .333) - 120px)' }}>"{novel.abstract}"</p>
             </div>
 
-            <div style={{ position: 'relative' }}>
+            {/* <div style={{ position: 'relative' }}>
                 <a className='button' data-novel-id={novel._id} style={{ position: 'absolute', bottom: '10px', right: '10px' }} onClick={addToLibrary}>
                     <span style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <i className="fa-solid fa-plus" />
                         add to library
                     </span>
                 </a>
-            </div>
+            </div> */}
         </div>
     );
 }
@@ -190,17 +190,17 @@ const FeaturedCard = (props) => {
             <div className='column is-four-fifths' style={{ display: 'flex', flexFlow: 'column', height: '100%' }}>
                 <a><h1 className='title'>{novel.title}</h1></a>
                 <h2 className='subtitle'>By {novel.author}</h2>
-                <p style={{ display: 'flex', overflow: 'hidden', textOverflow: 'ellipsis', height: 'calc((70vw * .315) - 150px)' }}>"{novel.abstract}"</p>
+                <p style={{ display: 'flex', overflow: 'hidden', textOverflow: 'ellipsis', height: 'calc((70vw * .315) - 120px)' }}>"{novel.abstract}"</p>
             </div>
 
-            <div style={{ position: 'relative' }}>
+            {/* <div style={{ position: 'relative' }}>
                 <a className='button' data-novel-id={novel._id} style={{ position: 'absolute', bottom: '10px', right: '10px' }} onClick={addToLibrary}>
                     <span style={{ gap: '10px', alignItems: 'center' }}>
                         <i className="fa-solid fa-plus" />
                         add to library
                     </span>
                 </a>
-            </div>
+            </div> */}
         </div>
     );
 }
