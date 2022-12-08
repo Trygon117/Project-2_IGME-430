@@ -33,6 +33,11 @@ const router = (app) => {
 
   app.get('/isPremium', mid.requiresLogin, mid.requiresSecure, controllers.Account.isPremium);
 
+  app.post('/addNovelToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToLibrary);
+
+  app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
+
+
   // pages
 
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);
@@ -80,12 +85,6 @@ const router = (app) => {
   app.post('/searchChapterNumber', mid.requiresSecure, controllers.Novels.searchChapterNumber);
 
   app.get('/getAllNovels', mid.requiresSecure, controllers.Novels.getAllNovels);
-
-  // account
-
-  app.post('/addNovelToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToLibrary);
-
-  app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
 
   // default
 

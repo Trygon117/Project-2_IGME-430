@@ -387,13 +387,14 @@ const setChapterNumber = (req, res) => {
 
       chapters.set(req.body.novelID, req.body.chapterNumber);
 
-      newAccount.chapters = chapters;
+      accountUpdate = { chapters: chapters, userID: session._id };
 
-      // console.log(newAccount);
-
-      const account = await newAccount.save();
-
-      return res.status(200).json(account);
+      Account.updateAccountByID(req, accountUpdate, (accountUpdateResponse) => {
+        if (accountUpdateResponse.error) {
+          return res.status(400).json({ error: accountUpdateResponse.error })
+        }
+        return res.status(200).json(accountUpdateResponse);
+      });
     });
   });
 };
@@ -406,13 +407,14 @@ const activatePremium = (req, res) => {
       return res.status(400).json({ error: accountResponse.error });
     }
 
-    const newAccount = accountResponse;
+    accountUpdate = { premium: true, userID: session._id };
 
-    newAccount.premium = true;
-
-    const account = await newAccount.save();
-
-    return res.status(200).json(account);
+    Account.updateAccountByID(req, accountUpdate, (updateResponse) => {
+      if (updateResponse.error) {
+        return res.json(400).json({ error: updateResponse.error });
+      }
+      return res.status(200).json(updateResponse);
+    });
   });
 };
 
@@ -424,13 +426,14 @@ const deactivatePremium = (req, res) => {
       return res.status(400).json({ error: accountResponse.error });
     }
 
-    const newAccount = accountResponse;
+    accountUpdate = { premium: false, userID: session._id };
 
-    newAccount.premium = false;
-
-    const account = await newAccount.save();
-
-    return res.status(200).json(account);
+    Account.updateAccountByID(req, accountUpdate, (updateResponse) => {
+      if (updateResponse.error) {
+        return res.json(400).json({ error: updateResponse.error });
+      }
+      return res.status(200).json(updateResponse);
+    });
   });
 };
 
