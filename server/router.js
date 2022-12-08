@@ -37,7 +37,6 @@ const router = (app) => {
 
   app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
 
-
   // pages
 
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);

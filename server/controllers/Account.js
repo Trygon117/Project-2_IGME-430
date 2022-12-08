@@ -369,8 +369,6 @@ const setChapterNumber = (req, res) => {
       if (req.body.chapterNumber < 0) {
         return res.status(400).json({ error: 'You cannot view a chapter with a negative index' });
       }
-
-      const newAccount = accountResponse;
       let chapters;
 
       // console.log(accountResponse);
@@ -387,11 +385,11 @@ const setChapterNumber = (req, res) => {
 
       chapters.set(req.body.novelID, req.body.chapterNumber);
 
-      accountUpdate = { chapters: chapters, userID: session._id };
+      const accountUpdate = { chapters, userID: session._id };
 
-      Account.updateAccountByID(req, accountUpdate, (accountUpdateResponse) => {
+      return Account.updateAccountByID(req, accountUpdate, (accountUpdateResponse) => {
         if (accountUpdateResponse.error) {
-          return res.status(400).json({ error: accountUpdateResponse.error })
+          return res.status(400).json({ error: accountUpdateResponse.error });
         }
         return res.status(200).json(accountUpdateResponse);
       });
@@ -402,14 +400,14 @@ const setChapterNumber = (req, res) => {
 const activatePremium = (req, res) => {
   const session = req.session.account;
 
-  Account.searchByID(req, session._id, async (accountResponse) => {
+  return Account.searchByID(req, session._id, async (accountResponse) => {
     if (accountResponse.error) {
       return res.status(400).json({ error: accountResponse.error });
     }
 
-    accountUpdate = { premium: true, userID: session._id };
+    const accountUpdate = { premium: true, userID: session._id };
 
-    Account.updateAccountByID(req, accountUpdate, (updateResponse) => {
+    return Account.updateAccountByID(req, accountUpdate, (updateResponse) => {
       if (updateResponse.error) {
         return res.json(400).json({ error: updateResponse.error });
       }
@@ -421,14 +419,14 @@ const activatePremium = (req, res) => {
 const deactivatePremium = (req, res) => {
   const session = req.session.account;
 
-  Account.searchByID(req, session._id, async (accountResponse) => {
+  return Account.searchByID(req, session._id, async (accountResponse) => {
     if (accountResponse.error) {
       return res.status(400).json({ error: accountResponse.error });
     }
 
-    accountUpdate = { premium: false, userID: session._id };
+    const accountUpdate = { premium: false, userID: session._id };
 
-    Account.updateAccountByID(req, accountUpdate, (updateResponse) => {
+    return Account.updateAccountByID(req, accountUpdate, (updateResponse) => {
       if (updateResponse.error) {
         return res.json(400).json({ error: updateResponse.error });
       }

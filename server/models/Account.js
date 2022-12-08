@@ -192,7 +192,7 @@ const updateAccountByID = async (req, updates, handler) => {
         case 'chapters':
           updatedUser.chapters = value;
           break;
-        case "premium":
+        case 'premium':
           updatedUser.premium = value;
           break;
         default:
