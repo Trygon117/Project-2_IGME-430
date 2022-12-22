@@ -10,11 +10,6 @@ const createNovel = async (req, res) => {
   console.log('create novel');
   const title = `${req.body.title}`;
   const { cover } = req.files;
-  let abstract = `${req.body.abstract}`;
-
-  if (!abstract || abstract === undefined) {
-    abstract = 'No Content Yet...';
-  }
 
   const sessionUsername = req.session.account.username;
 
@@ -39,7 +34,6 @@ const createNovel = async (req, res) => {
       cover: cover.data,
       coverName: cover.name,
       coverMime: cover.mimetype,
-      abstract,
     });
 
     await newNovel.save();
@@ -54,14 +48,12 @@ const createNovel = async (req, res) => {
 const publishNovel = async (req, res) => {
   console.log('Publish Novel');
 
-  // console.log(req.body);
-
-  if (req.body.published === null || typeof req.body.published !== 'boolean') {
-    return res.status(400).json({ error: 'Missing published' });
+  if (req.body.novelID === null) {
+    return res.status(400).json({ error: 'No novelID specified' });
   }
 
   const updates = {
-    published: req.body.published,
+    published: true,
     novelID: req.body.novelID,
   };
 
@@ -73,6 +65,28 @@ const publishNovel = async (req, res) => {
     return res.status(200).json(updateResponse);
   });
 };
+
+// set the novel to unpublished
+const unpublishNovel = async (req, res) => {
+  console.log('Unpublish Novel');
+
+  if (req.body.novelID === null) {
+    return res.status(400).json({ error: 'No novelID specified' });
+  }
+
+  const updates = {
+    published: false,
+    novelID: req.body.novelID,
+  };
+
+  return Novel.updateNovelByID(req, updates, (updateResponse) => {
+    if (updateResponse.error) {
+      return res.status(400).json({ error: updateResponse });
+    }
+
+    return res.status(200).json(updateResponse);
+  });
+}
 
 // edit novel data
 const editNovel = async (req, res) => {
@@ -197,365 +211,240 @@ const createChapter = async (req, res) => {
   });
 };
 
-// publish or unpublish chapter
+// universal function to publish or unpublish chapter
 const publishChapter = async (req, res) => {
   console.log('Publish Chapter');
 
-  // console.log(req.body);
+  console.log(req.body);
 
-  // check if mode was given
-  if (req.body.mode !== null && req.body.mode !== 'add-last' && req.body.mode !== 'unpublish') {
-    // check if chapter reference was given
-    if (req.body.referenceChapter === null) {
-      return res.status(400).json({ error: 'Missing chapter reference' });
-    }
+  if (req.body.mode === null) {
+    return res.status(400).json({ error: 'Missing Publish Mode' });
   }
 
-  // check if the chapter exists
-  return Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
-    // console.log('thisChapter');
-    // console.log(thisChapter);
+  switch (req.body.mode) {
+    case "unpublish":
+      return unpublishChapter(req, res);
+    case "replace":
+      return replaceChapter(req, res);
+    case "add-last":
+      return addChapterLast(req, res);
+    case "insert-before":
+      return insertChapterBefore(req, res);
+    case "insert-after":
+      return insertChapterAfter(req, res);
+    default:
+      return res.status(400).json({ error: 'No valid mode given' });
+  }
+};
 
+// recursive function to rename and order every {chapterType}-chapter
+const organizeChapters = (chapters, chapterType) => {
+  // console.log('renameChapters');
+  // console.log(chapters);
+  let chapterNum = 0;
+  let changed = false;
+  chapters.forEach((value, key) => {
+    if (!changed) {
+      if (key.includes(chapterType)) {
+        if (key === `${chapterType}-${chapterNum}`) {
+          chapterNum++;
+        } else {
+          chapters.delete(key);
+          chapters.set(`${chapterType}-${chapterNum}`, value);
+          changed = true;
+        }
+      }
+    }
+  });
+  if (changed) {
+    return organizeChapters(chapters, chapterType);
+  }
+  return chapters;
+};
+
+// adds a chapter as the last chapter
+// requires: chapterID, novelID
+const addChapterLast = async (req, res) => {
+  console.log('add chapter last');
+
+  // find this chapter
+  return Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
     if (thisChapter.error) {
       return res.status(400).json({ error: thisChapter.error });
     }
 
-    // check if the novel exists && is published
-    return Novel.searchByID(req, req.body.novelID, async (novelResponse) => {
-      if (novelResponse.error) {
-        return res.status(400).json({ error: novelResponse.error });
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json({ error: thisNovel.error });
+      } else if (thisNovel.published === false) {
+        return res.status(400).json({ error: 'Novel Not Published' });
       }
 
-      if (!novelResponse.published) {
-        return res.status(400).json({ error: 'novel not published', novel: novelResponse });
+      const newChapterName = `chapter-${thisNovel.publishedChapterCount}`;
+
+      const chapterUpdates = { chapterID: req.body.chapterID };
+      // set the chapter number to be the last chapter
+      chapterUpdates.chapterNumber = thisNovel.publishedChapterCount + 1;
+      chapterUpdates.chapter = newChapterName;
+      chapterUpdates.published = true;
+
+      // update the chapter
+      return Chapter.updateChapterByID(req, chapterUpdates, async (chapterResponse) => {
+        if (chapterResponse.error) {
+          return res.status(400).json({ error: chapterResponse.error });
+        }
+
+        let { chapters } = thisNovel;
+
+        if (chapters === undefined) {
+          chapters = new Map();
+        }
+
+        // delete the previous id
+        await chapters.delete(thisChapter.chapter);
+
+        // set the new id to this chapter
+        await chapters.set(`${newChapterName}`, thisChapter._id);
+
+        organizeChapters(chapters, 'chapter'); // most likely unnecessary
+        organizeChapters(chapters, 'draft');
+
+        const novelUpdates = { novelID: req.body.novelID };
+
+        novelUpdates.chapters = chapters;
+
+        // update the novel
+        return Novel.updateNovelByID(req, novelUpdates, async (thisNovel) => {
+          if (thisNovel.error) {
+            return res.status(400).json({ error: thisNovel.error });
+          }
+
+          return res.status(200).json({ chapter: chapterResponse, novel: thisNovel });
+        });
+      });
+    });
+  });
+}
+
+// inserts the chapter before another, and shifts every chapter back
+// requires: chapterID, novelID, referenceChapterID
+const insertChapterBefore = async (req, res) => {
+  console.log('insert chapter before');
+
+  // check if chapter reference was given
+  if (req.body.referenceChapterID === null) {
+    return res.status(400).json({ error: 'Missing chapter reference' });
+  }
+
+  // find this chapter
+  return Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
+    if (thisChapter.error) {
+      return res.status(400).json({ error: thisChapter.error });
+    }
+
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json({ error: thisNovel.error });
+      } else if (thisNovel.published === false) {
+        return res.status(400).json({ error: 'Novel Not Published' });
       }
 
-      // console.log(novelResponse);
+      // find the referenceChapter
+      return Chapter.searchByID(req, req.body.referenceChapterID, async (referenceChapter) => {
+        if (referenceChapter.error) {
+          return res.status(400).json({ error: referenceChapter.error });
+        }
 
-      const updates = { published: true, chapterID: thisChapter._id };
-      let newChapterName = thisChapter.chapter;
+        const newChapterName = referenceChapter.chapter;
 
-      // check the mode to add the novel
-      if (req.body.mode === 'unpublish') {
-        // unpublish the chapter
+        // update this chapter
+        const chapterUpdates = { chapterID: req.body.chapterID };
+        chapterUpdates.chapterNumber = referenceChapter.chapterNumber;
+        chapterUpdates.chapter = newChapterName;
+        chapterUpdates.published = true;
 
-        // console.log('pre-unpublish');
-
-        newChapterName = `draft-${novelResponse.totalChapterCount - novelResponse.publishedChapterCount}`;
-
-        updates.chapterNumber = -1;
-        updates.published = false;
-        updates.chapter = newChapterName;
-      } else if (req.body.mode === 'add-last') {
-        // add as the last chapter
-        // console.log('pre-add-last');
-
-        newChapterName = `chapter-${novelResponse.publishedChapterCount}`;
-
-        // set the chapter number to be the last chapter
-        updates.chapterNumber = novelResponse.publishedChapterCount + 1;
-        updates.chapter = newChapterName;
-      }
-
-      const publish = async (referenceChapter) => {
         // update the chapter
-
-        // console.log('updates');
-        // console.log(updates);
-
-        Chapter.updateChapterByID(req, updates, async (chapterResponse) => {
+        return Chapter.updateChapterByID(req, chapterUpdates, async (chapterResponse) => {
           if (chapterResponse.error) {
-            return res.status(400).json({ error: chapterResponse });
+            return res.status(400).json({ error: chapterResponse.error });
           }
 
-          // console.log('chapterResponse');
-          // console.log(chapterResponse);
-
-          const novelUpdates = { novelID: req.body.novelID };
-
-          // recursive function to rename and order every ""-chapter
-          const renameChapters = (chapters, chapterType) => {
-            // console.log('renameChapters');
-            // console.log(chapters);
-            let chapterNum = 0;
-            let changed = false;
-            chapters.forEach((value, key) => {
-              if (!changed) {
-                if (key.includes(chapterType)) {
-                  if (key === `${chapterType}-${chapterNum}`) {
-                    chapterNum++;
-                  } else {
-                    chapters.delete(key);
-                    chapters.set(`${chapterType}-${chapterNum}`, value);
-                    changed = true;
-                  }
-                }
-              }
-            });
-            if (changed) {
-              return renameChapters(chapters, chapterType);
-            }
-            return chapters;
-          };
-
-          const referenceUpdate = {};
-          if (referenceChapter) {
-            referenceUpdate.chapterID = referenceChapter._id;
-          }
+          const chapsToIncrease = [];
           const displacedChapterUpdates = [];
 
-          let { chapters } = novelResponse;
+          const referenceUpdate = {};
+
+          referenceUpdate.chapterID = referenceChapter._id;
+          referenceUpdate.chapter = `chapter-${referenceChapter.chapterNumber}`;
+          referenceUpdate.chapterNumber = referenceChapter.chapterNumber;
+          chapsToIncrease.unshift(referenceUpdate);
+
+          let { chapters } = thisNovel;
 
           if (chapters === undefined) {
             chapters = new Map();
           }
 
-          // console.log('referenceUpdate');
-          // console.log(referenceUpdate);
+          // delete the previous id
+          await chapters.delete(thisChapter.chapter);
 
-          // check the mode to add the novel
-          if (req.body.mode === 'unpublish') {
-            // unpublish the chapter
+          // set this chapter as the reference chapter's chapter
+          await chapters.set(`${newChapterName}`, thisChapter._id);
 
-            // console.log('unpublish');
-            // console.log(req.body);
+          // find all the chapters after this one
+          chapters.forEach((value, key) => {
+            let numString;
+            if (key.includes('chapter-')) {
+              numString = key.replace('chapter-', '');
 
-            // delete the previous id
-            await chapters.delete(thisChapter.chapter);
+              // chapter numbers are one greater than the chapter value
+              const chapNum = parseInt(numString, 10) + 1;
 
-            // set this chapter's id
-            await chapters.set(`${newChapterName}`, thisChapter._id);
-
-            renameChapters(chapters, 'chapter');
-            renameChapters(chapters, 'draft');
-
-            // console.log('chapters');
-            // console.log(chapters);
-
-            novelUpdates.chapters = chapters;
-          } else if (req.body.mode === 'replace') {
-            // replace the novel
-
-            console.log('replace');
-
-            if (referenceChapter) { // this is the other chapter
-              // console.log('referenceChapter');
-              // console.log(referenceChapter);
-
-              // set this chapter to be a draft
-              referenceUpdate.chapterID = referenceChapter._id;
-              referenceUpdate.chapter = `draft-${novelResponse.totalChapterCount - novelResponse.publishedChapterCount}`;
-              referenceUpdate.chapterNumber = -1;
-              referenceUpdate.published = false;
-
-              // update the novel
-
-              // delete the previous id
-              await chapters.delete(thisChapter.chapter);
-
-              // set this chapter as the reference chapter's chapter
-              await chapters.set(`${newChapterName}`, thisChapter._id);
-
-              // set the reference chapter as a draft
-              await chapters.set(referenceUpdate.chapter, referenceChapter._id);
-
-              // console.log(chapters);
-
-              renameChapters(chapters, 'draft');
-              renameChapters(chapters, 'chapter');
-
-              // console.log(chapters);
-
-              novelUpdates.chapters = chapters;
-            }
-          } else if (req.body.mode === 'insert-before') {
-            // add before the given novel
-
-            console.log('insert-before');
-
-            const chapsToIncrease = [];
-
-            if (referenceChapter) { // this is the other chapter
-              // set the reference chapter to come after the inserted chapter
-              referenceUpdate.chapterID = referenceChapter._id;
-              referenceUpdate.chapter = `chapter-${referenceChapter.chapterNumber}`;
-              referenceUpdate.chapterNumber = referenceChapter.chapterNumber;
-              chapsToIncrease.unshift(referenceUpdate);
-
-              // update the novel
-
-              // delete the previous id
-              await chapters.delete(thisChapter.chapter);
-
-              // set this chapter as the reference chapter's chapter
-              await chapters.set(`${newChapterName}`, thisChapter._id);
-
-              // set every chapter after this one as it's chapter + 1
-
-              // find all the chapters after this one
-              chapters.forEach((value, key) => {
-                let numString;
-                if (key.includes('chapter-')) {
-                  numString = key.replace('chapter-', '');
-
-                  // chapter numbers are one greater than the chapter value
-                  const chapNum = parseInt(numString, 10) + 1;
-
-                  // console.log('chapNum');
-                  // console.log(chapNum);
-
-                  // this chapter number is greater than the inserted chapter number
-                  if (chapNum > chapterResponse.chapterNumber) {
-                    // so we don't mess up the the array as we go through it
-                    chapsToIncrease.unshift({
-                      chapterID: value,
-                      chapter: key,
-                      chapterNumber: chapNum,
-                    });
-                  }
-                }
-              });
-
-              // console.log('chapsToIncrease');
-              // console.log(chapsToIncrease);
-
-              // go through the chapters we found
-              chapsToIncrease.forEach(async (chap) => {
-                // console.log(chap);
-                // increase the position by 1
-                if (chap.chapter.includes('chapter-')) {
-                  // update this chapter
-                  const disChapUpdate = {};
-                  disChapUpdate.chapterID = chap.chapterID;
-                  // the chapter number will already be one greater than this
-                  disChapUpdate.chapter = `chapter-${chap.chapterNumber}`;
-                  disChapUpdate.chapterNumber = chap.chapterNumber + 1;
-                  displacedChapterUpdates.unshift(disChapUpdate);
-                  // displace this chapter by 1
-                  await chapters.set(`chapter-${chap.chapterNumber}`, chap.chapterID);
-                }
-              });
-
-              novelUpdates.chapters = chapters;
-            }
-          } else if (req.body.mode === 'insert-after') {
-            // add after the given novel
-
-            // console.log('insert-after');
-            // console.log(req.body.referenceChapter);
-
-            const chapsToIncrease = [];
-
-            if (referenceChapter) { // this is the other chapter
-              // update the novel
-
-              // delete the previous id
-              await chapters.delete(thisChapter.chapter);
-
-              // set this chapter to be increased
-              chapsToIncrease.unshift({
-                chapterID: thisChapter._id,
-                chapter: newChapterName,
-                chapterNumber: referenceChapter.chapterNumber,
-              });
-
-              // set this chapter as the reference chapter's chapter
-              // await chapters.set(`${newChapterName}`, thisChapter._id);
-
-              // set every chapter after this one as it's chapter + 1
-
-              // find all the chapters after this one
-              chapters.forEach((value, key) => {
-                let numString;
-                if (key.includes('chapter-')) {
-                  numString = key.replace('chapter-', '');
-
-                  // chapter numbers are one greater than the chapter value
-                  const chapNum = parseInt(numString, 10) + 1;
-
-                  // console.log('chapNum');
-                  // console.log(chapNum);
-
-                  // if the this chapter number is greater than the inserted chapter number
-                  if (chapNum > chapterResponse.chapterNumber) {
-                    // so we don't mess up the the array as we go through it
-                    chapsToIncrease.unshift({
-                      chapterID: value,
-                      chapter: key,
-                      chapterNumber: chapNum,
-                    });
-                  }
-                }
-              });
-
-              // console.log('chapsToIncrease');
-              // console.log(chapsToIncrease);
-
-              // go through the chapters we found
-              chapsToIncrease.forEach(async (chap) => {
-                // console.log(chap);
-                // increase the position by 1
-                if (chap.chapter.includes('chapter-')) {
-                  // update this chapter
-                  const disChapUpdate = {};
-                  disChapUpdate.chapterID = chap.chapterID;
-                  disChapUpdate.chapter = `chapter-${chap.chapterNumber}`; // the chapter number will already be one greater than this
-                  disChapUpdate.chapterNumber = chap.chapterNumber + 1;
-                  displacedChapterUpdates.unshift(disChapUpdate);
-                  // displace this chapter by 1
-                  await chapters.set(`chapter-${chap.chapterNumber}`, chap.chapterID);
-                }
-              });
-
-              novelUpdates.chapters = chapters;
-            }
-          } else if (req.body.mode === 'add-last') {
-            // add as the last chapter
-            console.log('add-last');
-
-            // delete the previous id
-            await chapters.delete(thisChapter.chapter);
-
-            // set the new id to this chapter
-            await chapters.set(`${newChapterName}`, thisChapter._id);
-
-            // console.log(chapters);
-
-            renameChapters(chapters, 'draft');
-
-            // console.log(chapters);
-
-            novelUpdates.chapters = chapters;
-          }
-
-          // update the novel
-          return Novel.updateNovelByID(req, novelUpdates, async (novelUpdateResponse) => {
-            if (req.body.mode === 'replace') {
-              // console.log('updating reference chapter');
-              // console.log(referenceUpdate);
-
-              return Chapter.updateChapterByID(req, referenceUpdate, (refRes) => {
-                if (refRes.error) {
-                  return res.status(400).json({ error: refRes.error });
-                }
-
-                // console.log('updated reference chapter');
-                // console.log(refRes);
-
-                return res.status(200).json({
-                  chapter: chapterResponse,
-                  refernceNovel: refRes,
-                  novel: novelUpdateResponse,
+              // the chapter number is greater than the inserted chapter number
+              if (chapNum > chapterResponse.chapterNumber) {
+                // so we don't mess up the the array as we go through it
+                chapsToIncrease.unshift({
+                  chapterID: value,
+                  chapter: key,
+                  chapterNumber: chapNum,
                 });
-              });
-            } if (req.body.mode === 'insert-after' || req.body.mode === 'insert-before') {
+              }
+            }
+
+            // prime the updates for the chapters we found
+            chapsToIncrease.forEach(async (chap) => {
+              // console.log(chap);
+              // increase the position by 1
+              if (chap.chapter.includes('chapter-')) {
+                // update this chapter
+                const dispChapUpdate = {};
+                dispChapUpdate.chapterID = chap.chapterID;
+                // the chapter number will already be one greater than this
+                dispChapUpdate.chapter = `chapter-${chap.chapterNumber}`;
+                dispChapUpdate.chapterNumber = chap.chapterNumber + 1;
+                displacedChapterUpdates.unshift(dispChapUpdate);
+                // displace this chapter by 1
+                await chapters.set(`chapter-${chap.chapterNumber}`, chap.chapterID);
+              }
+            });
+
+            const novelUpdates = { novelID: req.body.novelID };
+
+            novelUpdates.chapters = chapters;
+
+            // update the novel
+            return Novel.updateNovelByID(req, novelUpdates, async (novelResponse) => {
+              if (novelResponse.error) {
+                return res.status(400).json({ error: novelResponse.error });
+              }
+
               console.log('updating displaced chapters');
 
               const displacedChapters = [];
 
-              // console.log('displacedChapterUpdates');
-              // console.log(displacedChapterUpdates);
-
+              // update each displaced chapter
               displacedChapterUpdates.forEach(async (update) => {
                 await Chapter.updateChapterByID(req, update, (displacedResponse) => {
                   displacedChapters.unshift(displacedResponse);
@@ -564,84 +453,304 @@ const publishChapter = async (req, res) => {
 
               return res.status(200).json({
                 chapter: chapterResponse,
-                novel: novelUpdateResponse,
+                novel: novelResponse,
                 displacedChapters,
               });
-            }
-            if (novelUpdateResponse.error) {
-              return res.status(400).json({ error: novelUpdateResponse.error });
-            }
-            return res.status(200).json({ chapter: chapterResponse, novel: novelUpdateResponse });
+            });
           });
         });
-      }; // end publish
-
-      // make sure that there is a novel to replace
-      if (req.body.referenceChapter) {
-        // search by the given chapter and novel
-        return Chapter.searchByCriteria(req, {
-          chapter: req.body.referenceChapter,
-          novelID: req.body.novelID,
-        }, (referenceResponse) => {
-          // console.log('referenceResponse');
-          // console.log(referenceResponse);
-
-          // if there is somehow more than one novel
-          if (Object.keys(referenceResponse).length > 1) {
-            return res.status(400).json({ error: 'More than one reference novel found' });
-          }
-
-          const referenceChapter = Object.values(referenceResponse)[0];
-
-          // check if the found novel is published
-          if (referenceChapter.published) {
-            if (req.body.mode === 'replace') {
-              // replace the novel
-
-              // console.log('pre-replace');
-
-              newChapterName = referenceChapter.chapter;
-
-              // update the new novel
-              updates.chapterNumber = referenceChapter.chapterNumber;
-              updates.chapter = newChapterName;
-              updates.published = true;
-            } else if (req.body.mode === 'insert-before') {
-              // add before the given novel
-
-              // console.log('pre-insert-before');
-
-              newChapterName = referenceChapter.chapter;
-
-              // update the inserted novel
-              updates.chapterNumber = referenceChapter.chapterNumber;
-              updates.chapter = newChapterName;
-              updates.published = true;
-            } else if (req.body.mode === 'insert-after') {
-              // add after the given novel
-
-              // console.log('pre-insert-after');
-
-              newChapterName = referenceChapter.chapter;
-
-              // update the new novel
-              updates.chapterNumber = referenceChapter.chapterNumber;
-              updates.chapter = newChapterName;
-              updates.published = true;
-            }
-
-            return publish(referenceChapter);
-          }
-          return res.status(400).json({ error: 'Reference chapter is either unpublished or does not exist' });
-        }).catch((err) => {
-          console.log(err);
-          return res.status(400).json({ error: 'Error searching for reference chapter' });
-        });
-      }
-      return publish(null);
+      });
     });
   });
-};
+}
+
+// inserts the chapter after another, and shifts every chapter back
+// requires: chapterID, novelID, referenceChapter
+const insertChapterAfter = async (req, res) => {
+  console.log('insert chapter after');
+
+  // check if chapter reference was given
+  if (req.body.referenceChapterID === null) {
+    return res.status(400).json({ error: 'Missing chapter reference' });
+  }
+
+  // find this chapter
+  return Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
+    if (thisChapter.error) {
+      return res.status(400).json({ error: thisChapter.error });
+    }
+
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json({ error: thisNovel.error });
+      } else if (thisNovel.published === false) {
+        return res.status(400).json({ error: 'Novel Not Published' });
+      }
+
+      // find the referenceChapter
+      return Chapter.searchByID(req, req.body.referenceChapterID, async (referenceChapter) => {
+        if (referenceChapter.error) {
+          return res.status(400).json({ error: referenceChapter.error });
+        }
+
+        const newChapterName = referenceChapter.chapter;
+
+        // update this chapter
+        const chapterUpdates = { chapterID: req.body.chapterID };
+        chapterUpdates.chapterNumber = referenceChapter.chapterNumber;
+        chapterUpdates.chapter = newChapterName;
+        chapterUpdates.published = true;
+
+        // update the chapter
+        return Chapter.updateChapterByID(req, chapterUpdates, async (chapterResponse) => {
+          if (chapterResponse.error) {
+            return res.status(400).json({ error: chapterResponse.error });
+          }
+
+          const chapsToIncrease = [];
+
+          // delete the previous id
+          await chapters.delete(thisChapter.chapter);
+
+          // set this chapter to be increased
+          chapsToIncrease.unshift({
+            chapterID: thisChapter._id,
+            chapter: newChapterName,
+            chapterNumber: referenceChapter.chapterNumber,
+          });
+
+          // find all the chapters after this one
+          chapters.forEach((value, key) => {
+            let numString;
+            if (key.includes('chapter-')) {
+              numString = key.replace('chapter-', '');
+
+              // chapter numbers are one greater than the chapter value
+              const chapNum = parseInt(numString, 10) + 1;
+
+              // console.log('chapNum');
+              // console.log(chapNum);
+
+              // if the this chapter number is greater than the inserted chapter number
+              if (chapNum > chapterResponse.chapterNumber) {
+                // so we don't mess up the the array as we go through it
+                chapsToIncrease.unshift({
+                  chapterID: value,
+                  chapter: key,
+                  chapterNumber: chapNum,
+                });
+              }
+            }
+          });
+
+          // go through the chapters we found
+          chapsToIncrease.forEach(async (chap) => {
+            // console.log(chap);
+            // increase the position by 1
+            if (chap.chapter.includes('chapter-')) {
+              // update this chapter
+              const disChapUpdate = {};
+              disChapUpdate.chapterID = chap.chapterID;
+              disChapUpdate.chapter = `chapter-${chap.chapterNumber}`; // the chapter number will already be one greater than this
+              disChapUpdate.chapterNumber = chap.chapterNumber + 1;
+              displacedChapterUpdates.unshift(disChapUpdate);
+              // displace this chapter by 1
+              await chapters.set(`chapter-${chap.chapterNumber}`, chap.chapterID);
+            }
+          });
+
+          const novelUpdates = { novelID: req.body.novelID };
+
+          novelUpdates.chapters = chapters;
+
+          // update the novel
+          return Novel.updateNovelByID(req, novelUpdates, async (novelResponse) => {
+            if (novelResponse.error) {
+              return res.status(400).json({ error: novelResponse.error });
+            }
+
+            console.log('updating displaced chapters');
+
+            const displacedChapters = [];
+
+            // update each displaced chapter
+            displacedChapterUpdates.forEach(async (update) => {
+              await Chapter.updateChapterByID(req, update, (displacedResponse) => {
+                displacedChapters.unshift(displacedResponse);
+              });
+            });
+
+            return res.status(200).json({
+              chapter: chapterResponse,
+              novel: novelResponse,
+              displacedChapters,
+            });
+          });
+        });
+      });
+    });
+  });
+} //
+
+// replaces a chapter and sets the other chapter to unpublish
+// requires: chapterID, novelID, referenceChapterID
+const replaceChapter = async (req, res) => {
+  console.log('replace chapter');
+
+  // check if chapter reference was given
+  if (req.body.referenceChapterID === null) {
+    return res.status(400).json({ error: 'Missing chapter reference' });
+  }
+
+  // find this chapter
+  return Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
+    if (thisChapter.error) {
+      return res.status(400).json({ error: thisChapter.error });
+    }
+
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json({ error: thisNovel.error });
+      } else if (thisNovel.published === false) {
+        return res.status(400).json({ error: 'Novel Not Published' });
+      }
+
+      // find the referenceChapter
+      return Chapter.searchByID(req, req.body.referenceChapterID, async (referenceChapter) => {
+        if (referenceChapter.error) {
+          return res.status(400).json({ error: referenceChapter.error });
+        }
+
+        const newChapterName = referenceChapter.chapter;
+
+        // update this chapter
+        const chapterUpdates = { chapterID: req.body.chapterID };
+
+        // update the new novel
+        chapterUpdates.chapterNumber = referenceChapter.chapterNumber;
+        chapterUpdates.chapter = newChapterName;
+        chapterUpdates.published = true;
+
+        // update the chapter
+        return Chapter.updateChapterByID(req, chapterUpdates, async (chapterResponse) => {
+          if (chapterResponse.error) {
+            return res.status(400).json({ error: chapterResponse.error });
+          }
+
+          const referenceUpdate = { chapterID: referenceChapter._id };
+
+          // set the reference chapter to be a draft
+          referenceUpdate.chapter = `draft-${novelResponse.totalChapterCount - novelResponse.publishedChapterCount}`;
+          referenceUpdate.chapterNumber = -1;
+          referenceUpdate.published = false;
+
+          // delete the previous id
+          await chapters.delete(thisChapter.chapter);
+
+          // set this chapter as the reference chapter's chapter
+          await chapters.set(`${newChapterName}`, thisChapter._id);
+
+          // set the reference chapter as a draft
+          await chapters.set(referenceUpdate.chapter, referenceChapter._id);
+
+          organizeChapters(chapters, 'chapter');
+          organizeChapters(chapters, 'draft');
+
+          const novelUpdates = { novelID: req.body.novelID };
+          novelUpdates.chapters = chapters;
+
+          // update the novel
+          return Novel.updateNovelByID(req, novelUpdates, async (novelResponse) => {
+            if (novelResponse.error) {
+              return res.status(400).json({ error: novelResponse.error });
+            }
+
+            return Chapter.updateChapterByID(req, referenceUpdate, (refRes) => {
+              if (refRes.error) {
+                return res.status(400).json({ error: refRes.error });
+              }
+
+              // console.log('updated reference chapter');
+              // console.log(refRes);
+
+              return res.status(200).json({
+                chapter: chapterResponse,
+                refernceNovel: refRes,
+                novel: novelUpdateResponse,
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+} //
+
+// unpublishes a chapter and updates all corresponding information
+// requires: chapterID, novelID
+const unpublishChapter = async (req, res) => {
+  console.log('unpublish chapter');
+
+  // find this chapter
+  return Chapter.searchByID(req, req.body.chapterID, async (thisChapter) => {
+    if (thisChapter.error) {
+      return res.status(400).json({ error: thisChapter.error });
+    }
+
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json({ error: thisNovel.error });
+      } else if (thisNovel.published === false) {
+        return res.status(400).json({ error: 'Novel Not Published' });
+      }
+
+      const newChapterName = `draft-${thisNovel.totalChapterCount - thisNovel.publishedChapterCount}`;
+
+      const chapterUpdates = { chapterID: req.body.chapterID };
+      chapterUpdates.chapterNumber = -1;
+      chapterUpdates.published = false;
+      chapterUpdates.chapter = newChapterName;
+
+      // update the chapter
+      return Chapter.updateChapterByID(req, chapterUpdates, async (chapterResponse) => {
+        if (chapterResponse.error) {
+          return res.status(400).json({ error: chapterResponse.error });
+        }
+
+        let { chapters } = thisNovel;
+
+        if (chapters === undefined) {
+          chapters = new Map();
+        }
+
+        // delete the previous id
+        await chapters.delete(thisChapter.chapter);
+
+        // set this chapter's id
+        await chapters.set(`${newChapterName}`, thisChapter._id);
+
+        organizeChapters(chapters, 'chapter');
+        organizeChapters(chapters, 'draft');
+
+        const novelUpdates = { novelID: req.body.novelID };
+
+        novelUpdates.chapters = chapters;
+
+        // update the novel
+        return Novel.updateNovelByID(req, novelUpdates, async (novelResponse) => {
+          if (novelResponse.error) {
+            return res.status(400).json({ error: novelResponse.error });
+          }
+
+          return res.status(200).json({ chapter: chapterResponse, novel: novelResponse });
+        });
+      });
+    });
+  });
+}//
 
 const editChapter = async (req, res) => {
   console.log('Edit Chapter');
@@ -834,6 +943,7 @@ const getAllNovels = async (req, res) => Novel.getAllNovels((response) => {
 module.exports = {
   createNovel,
   publishNovel,
+  unpublishNovel,
   editNovel,
   // deleteNovel,
   createChapter,

@@ -66,38 +66,45 @@ const isDescendent = (parent, child) => {
 }
 
 const publishChapter = (mode, data, handler) => {
-    const body = {};
+    const body = { _csrf: data._csrf };
     switch (mode) {
         case 'add-last':
-            body.chapterID = data.chapter._id;
-            body.novelID = data.chapter.novelID;
-            body.chapter = data.chapter.chapter;
+            body.chapterID = data.chapterID;
+            body.novelID = data.novelID;
             body.mode = mode;
             break;
         case 'replace':
-        // all do the same
-        case 'insert-before':
-        // all do the same
-        case 'insert-after':
-            body.chapterID = data.chapter._id;
-            body.novelID = data.chapter.novelID;
-            body.chapter = data.chapter.chapter;
+            body.chapterID = data.chapterID;
+            body.novelID = data.novelID;
+            body.referenceChapterID = data.referenceChapterID;
             body.mode = mode;
-            body.referenceChapter = data.referenceChapter; // litterally just the .chapter
+            break;
+        case 'insert-before':
+            body.chapterID = data.chapterID;
+            body.novelID = data.novelID;
+            body.referenceChapterID = data.referenceChapterID;
+            body.mode = mode;
+            break;
+        case 'insert-after':
+            body.chapterID = data.chapterID;
+            body.novelID = data.novelID;
+            body.referenceChapterID = data.referenceChapterID;
+            body.mode = mode;
             break;
         case 'unpublish':
-            body.chapterID = data.chapter._id;
-            body.novelID = data.chapter.novelID;
-            body.chapter = data.chapter.chapter;
+            body.chapterID = data.chapterID;
+            body.novelID = data.novelID;
             body.mode = mode;
             break;
         default:
-            handler('No Mode');
+            handler({ error: 'No Mode' });
             break;
-
     }
-    body._csrf = data._csrf;
     sendPost('/publishChapter', body, handler);
+}
+
+const publishNovel = (data, handler) => {
+    sendPost('/publishNovel', data, handler);
 }
 
 module.exports = {
@@ -105,4 +112,5 @@ module.exports = {
     sendMultipartPost,
     isDescendent,
     publishChapter,
+    publishNovel
 }

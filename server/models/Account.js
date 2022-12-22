@@ -24,7 +24,13 @@ const AccountSchema = new mongoose.Schema({
     default: false,
   },
   library: {
-    type: Array, // an array of maps which are the different shelves
+    type: Array, // an array of objects which represents a shelf and contains a list of 
+    default: [{
+      title: 'Main Shelf',
+      novels: [],
+      public: false,
+    }],
+    required: true,
   },
   chapters: { // A map with the id of the novel as the key and a chapter number as a value
     type: Map,

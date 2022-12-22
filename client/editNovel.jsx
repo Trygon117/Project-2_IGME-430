@@ -104,23 +104,6 @@ const EditNovelWindow = (props) => {
     return (
         <div>
 
-            <div id="modal" className="modal">
-                <div className="modal-background" onClick={Modal.closeAllModals}></div>
-                <div className="modal-card">
-                    <header className="modal-card-head">
-                        <p id="modal-title" className="modal-card-title"></p>
-                        <button className="delete" aria-label="close" onClick={Modal.closeModal}></button>
-                    </header>
-                    <section id='modal-card-body' className="modal-card-body">
-
-                    </section>
-                    <footer className="modal-card-foot">
-                        <button id='modal-save-button' className="button is-success" onClick={Modal.closeModal}>Save changes</button>
-                        <button className="button" onClick={Modal.closeModal}>Cancel</button>
-                    </footer>
-                </div>
-            </div>
-
             <div className="box" style={{ minHeight: '80vh', width: '100vw', margin: 'auto', padding: 0 }}>
 
                 <div className='' style={{ height: 65, width: '100vw', margin: 'auto', border: 'thin ridge', display: 'flex', flexFlow: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: '30px' }}>
@@ -156,19 +139,10 @@ const EditNovelWindow = (props) => {
                     </div>
 
                 </div>
-                <div className='box'>
-                    <ul>
-                        <li>Published Chapters: {novel.publishedChapterCount}</li>
-                        <li>Unpublished Chapters: {novel.totalChapterCount - novel.publishedChapterCount}</li>
-                        <li>Created Date: {readableCreatedDate}</li>
-                        <li>Published: {published}</li>
-                        <li>Publication Date: {novel.published}</li>
-                    </ul>
-                </div>
 
                 <hr></hr>
 
-                <div style={{ marginLeft: '20px', marginRight: '20px' }}>
+                <div style={{ marginLeft: '20px', marginRight: '20px', minHeight: '500px' }}>
 
                     <div className='tabs is-toggle'>
                         <ul>
@@ -176,8 +150,6 @@ const EditNovelWindow = (props) => {
                             <li id='drafts-button-li'><a id='drafts-button' onClick={viewDrafts} >Drafts</a></li>
                         </ul>
                     </div>
-
-
 
                     <div id='chapters-heading' className='columns' style={{ width: '100%', cursor: 'hand', display: 'flex', justifyContent: 'space-between', borderBottom: 'thick solid' }}>
                         <span id='chapter-number' className='column has-text-weight-bold' style={{ textAlign: 'center' }}>
@@ -200,6 +172,17 @@ const EditNovelWindow = (props) => {
 
                     </div>
                 </div>
+
+                <div className='box'>
+                    <ul>
+                        <li>Published Chapters: {novel.publishedChapterCount}</li>
+                        <li>Unpublished Chapters: {novel.totalChapterCount - novel.publishedChapterCount}</li>
+                        <li>Created Date: {readableCreatedDate}</li>
+                        <li>Published: {published}</li>
+                        <li>Publication Date: {novel.published}</li>
+                    </ul>
+                </div>
+
             </div>
         </div>
     );

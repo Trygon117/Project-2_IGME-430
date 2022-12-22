@@ -2,6 +2,7 @@ const controllers = require('./controllers');
 const mid = require('./middleware');
 
 const router = (app) => {
+
   // account
   app.get('/getToken', mid.requiresSecure, controllers.Account.getToken);
 
@@ -33,12 +34,20 @@ const router = (app) => {
 
   app.get('/isPremium', mid.requiresLogin, mid.requiresSecure, controllers.Account.isPremium);
 
-  app.post('/addNovelToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToLibrary);
+  //app.post('/addNovelToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToLibrary);
 
-  app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
+  //app.post('/removeNovelFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromLibrary);
+
+  app.post('/addShelfToLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.addShelfToLibrary);
+
+  app.post('/removeShelfFromLibrary', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeShelfFromLibrary);
+
+  app.post('/addNovelToShelf', mid.requiresLogin, mid.requiresSecure, controllers.Account.addNovelToShelf);
+
+  app.post('/removeNovelFromShelf', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromShelf);
+
 
   // pages
-
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);
 
   app.get('/create', mid.requiresSecure, mid.requiresLogin, controllers.Pages.createPage);
@@ -58,12 +67,13 @@ const router = (app) => {
   // Novels
   app.post('/createNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.createNovel);
 
-  // app.post('/deleteNovel', mid.requiresLogin,
-  // mid.requiresSecure, controllers.Novels.deleteNovel);
+  // app.post('/deleteNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.deleteNovel);
 
   app.post('/editNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.editNovel);
 
   app.post('/publishNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.publishNovel);
+
+  app.post('/unpublishNovel', mid.requiresLogin, mid.requiresSecure, controllers.Novels.unpublishNovel);
 
   // Chapters
   app.post('/createChapter', mid.requiresLogin, mid.requiresSecure, controllers.Novels.createChapter);
@@ -86,7 +96,6 @@ const router = (app) => {
   app.get('/getAllNovels', mid.requiresSecure, controllers.Novels.getAllNovels);
 
   // default
-
   app.get('/', mid.requiresSecure, controllers.Pages.homePage);
 
   app.get('/*', controllers.Pages.notFound);

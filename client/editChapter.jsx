@@ -1,10 +1,10 @@
 //If I ever get around to fixing this use this resource
 //https://javascript.info/selection-range#range
 const helper = require('./helper.js');
+const Modal = require('./modal.jsx');
 
 let updateInterval;
 let initialLoad = true;
-let modalYesListener;
 
 // Create the chapter editor page
 const EditChapterWindow = (props) => {
@@ -15,35 +15,9 @@ const EditChapterWindow = (props) => {
     let ctrlDown = false;
 
     const publishChapter = async (e) => {
+        console.log('publish chapter');
+
         const publish = document.getElementById('publish-button').innerText === 'Publish';
-
-        const updatePublishButton = () => {
-            const publishButton = document.getElementById('publish-button');
-            const publishIcon = document.getElementById('publish-icon');
-            const publishText = document.createTextNode('Publish');
-
-            publishButton.innerHTML = '';
-
-            console.log('Chapter');
-            console.log(Chapter);
-            if (!Chapter.published) {
-                publishText.textContent = 'Publish';
-
-                publishButton.classList.remove('is-danger');
-                publishButton.classList.add('is-primary');
-
-                publishIcon.className = "fa-solid fa-check";
-            } else {
-                publishText.textContent = 'Unpublish';
-
-                publishButton.classList.add('is-danger');
-                publishButton.classList.remove('is-primary');
-
-                publishIcon.className = "fa-solid fa-x";
-            }
-            publishButton.appendChild(publishIcon);
-            publishButton.appendChild(publishText);
-        }
 
         // check if we want to unpublish the chapter
         if (!publish) {
@@ -59,54 +33,20 @@ const EditChapterWindow = (props) => {
                 console.log(unPubResponse);
                 Chapter = unPubResponse.chapter;
                 console.log(props);
-                updatePublishButton();
+                updatePublishButton(Chapter);
             });
             return;
         }
 
-        openModal('publish chapter', (chapterLocation) => {
-            console.log(Chapter);
-            const body = {
-                chapterID: Chapter._id,
-                novelID: Chapter.novelID,
-                chapter: Chapter.chapter,
-                chapterNumber: chapterLocation.chapterNumber,
-                mode: chapterLocation.mode,
-                referenceChapter: chapterLocation.chapter,
-                _csrf: props.csrf
-            };
-            helper.sendPost('/publishChapter', body, (pubChapterResponse) => {
+        // console.log('opening modal');
+        // console.log(props);
 
-                console.log('pubChapterResponse');
-                console.log(pubChapterResponse);
+        // open up the modal so the user can publish the chapter
+        Modal.openModal({ modalType: 'publishChapter', chapter: props.chapter, csrf: props.csrf }, (response) => {
+            console.log('modal response');
+            console.log(response);
 
-
-                if (pubChapterResponse.error === 'novel not published') {
-                    // ask user if they want to publish the novel
-                    openModal('publish novel', () => {
-                        console.log('publish novel');
-                        helper.sendPost('/publishNovel', { novelID: Chapter.novelID, published: true, _csrf: props.csrf }, (pubNovelResponse) => {
-                            console.log(pubNovelResponse);
-                            if (pubNovelResponse.error) {
-                                console.log('Could not publish the novel');
-                            } else {
-                                publishChapter(e);
-                            }
-                        });
-                    });
-                } else if (pubChapterResponse.error) {
-                    console.log('error publishing');
-                    const modal = document.getElementById("modal");
-                    modal.classList.remove('is-active');
-                } else {
-                    console.log('published!');
-                    const modal = document.getElementById("modal");
-                    modal.classList.remove('is-active');
-                    Chapter = pubChapterResponse.chapter;
-                    console.log(props);
-                    updatePublishButton();
-                }
-            });
+            updatePublishButton(response.chapter);
         });
     };
 
@@ -891,595 +831,8 @@ const EditChapterWindow = (props) => {
         doc.addEventListener('keyUp', interceptKeyUp);
     };
 
-    const openModal = (modalType, handler) => {
-
-        const modalTextArea = document.getElementById("modal-text-area");
-        const modal = document.getElementById("modal");
-        const yesButton = document.getElementById("modal-yes-button");
-        const cancelButton = document.getElementById("modal-cancel-button");
-        const modalTitle = document.getElementById("modal-title");
-
-        yesButton.disabled = false;
-
-        switch (modalType) {
-            case "publish novel":
-                modalTextArea.innerHTML = '';
-
-                const publishNovelExplanation = document.createElement('p');
-                const publishNovelQuery = document.createElement('p');
-
-                publishNovelExplanation.innerText = 'This chapter cannot be published because the novel is not published.';
-                publishNovelQuery.innerText = 'Would you like to publish the novel ? ';
-
-                modalTextArea.appendChild(publishNovelExplanation);
-                modalTextArea.appendChild(publishNovelQuery);
-
-                yesButton.style.visibility = 'visible';
-                yesButton.innerText = 'Yes';
-                yesButton.removeEventListener('click', modalYesListener);
-                modalYesListener = handler;
-                yesButton.addEventListener('click', handler);
-
-                cancelButton.innerText = 'Cancel';
-                modalTitle.innerText = "Novel Not Published";
-
-                modal.classList.add('is-active');
-                break;
-            case 'publish chapter':
-                // return chapter number and what to do with it
-                modalTextArea.innerHTML = '';
-
-                yesButton.disabled = true;
-
-                helper.sendPost('/searchNovelByID', { novelID: Chapter.novelID, _csrf: props.csrf }, (response) => {
-
-                    console.log(response);
-
-                    const publishedChapters = [];
-
-                    Object.keys(response.novel.chapters).forEach(chapter => {
-                        if (chapter.includes('chapter-')) {
-                            publishedChapters.push(chapter);
-                        }
-                    });
-
-                    // this is where the magic happens!
-                    const pubChapFunDiv = document.createElement('div');
-                    pubChapFunDiv.style.border = 'ridge thin';
-                    pubChapFunDiv.style.height = '350px';
-                    pubChapFunDiv.style.overflowY = 'auto';
-
-                    for (const chapter of publishedChapters) {
-
-                        // chap option container
-
-                        const chapOptionContainer = document.createElement('div');
-                        chapOptionContainer.id = 'chap-option-container';
-                        chapOptionContainer.setAttribute('data-selected', 'false');
-
-
-                        // click
-                        const chapOptionContainerClicked = () => {
-                            let wasSelected = false;
-                            if (chapOptionContainer.getAttribute('data-selected') === 'true') {
-                                wasSelected = true;
-                            }
-
-                            // set every other container as not selected
-                            pubChapFunDiv.querySelectorAll('#chap-option-container').forEach(node => {
-                                //console.log(node);
-                                node.setAttribute('data-selected', 'false');
-                            });
-
-                            let childSelected = false;
-                            // check to see if any children of this container are selected
-                            chapOptionContainer.childNodes.forEach(node => {
-                                if (node.getAttribute('data-selected') === 'true') {
-                                    childSelected = true;
-                                }
-                            });
-
-
-                            // if it wasn't previously selected or a child is selected
-                            if (!wasSelected || childSelected) {
-                                // set this as selected
-                                chapOptionContainer.setAttribute('data-selected', 'true');
-                            }
-
-
-
-                            //console.log(pubChapFunDiv);
-                        };
-
-                        //chapOptionContainer.onclick = chapOptionContainerClicked;
-
-
-                        //insert before
-
-                        const insertBeforeChap = document.createElement('span');
-                        insertBeforeChap.id = 'chap-insert';
-                        insertBeforeChap.setAttribute('insert', 'before');
-
-
-                        const chapInsertBeforeIcon = document.createElement('i');
-                        chapInsertBeforeIcon.className = 'fa-solid fa-arrow-up';
-
-                        const chapInsertBeforeText = document.createElement('p');
-                        chapInsertBeforeText.innerText = 'insert before';
-
-                        insertBeforeChap.style.border = 'thin ridge';
-                        insertBeforeChap.className = 'has-text-grey';
-
-                        insertBeforeChap.style.display = 'flex';
-                        insertBeforeChap.style.alignItems = 'center';
-                        insertBeforeChap.style.gap = '10px';
-                        insertBeforeChap.style.height = '30px';
-
-                        insertBeforeChap.appendChild(chapInsertBeforeIcon);
-                        insertBeforeChap.appendChild(chapInsertBeforeText);
-
-                        // hide this
-                        insertBeforeChap.style.visibility = 'hidden';
-                        insertBeforeChap.style.display = 'none';
-                        //insertBeforeChap.hidden = true;
-
-                        const insertBeforeChangeEvent = () => {
-                            //     //console.log('before changed');
-                            if (insertBeforeChap.getAttribute('data-selected') === 'true') {
-                                //console.log('set as selected');
-                                // set as selected
-                                insertBeforeChap.style.height = '40px';
-                                insertBeforeChap.style.backgroundColor = '#62c462';
-                                chapInsertBeforeText.style.fontSize = '20px';
-                            } else if (chapOptionContainer.getAttribute('data-selected') === 'true') {
-                                // set as container selected
-                                insertBeforeChap.style.height = '40px';
-                                insertBeforeChap.style.backgroundColor = '#ffc9c9';
-                                chapInsertBeforeText.style.fontSize = '20px';
-                            } else {
-                                //console.log('set as unselected');
-                                // set as unselected
-                                insertBeforeChap.style.height = '30px';
-                                insertBeforeChap.style.backgroundColor = '#ffffff';
-                                chapInsertBeforeText.style.fontSize = '17px';
-                            }
-                        };
-
-                        // mouse enter
-                        insertBeforeChap.onmouseenter = () => {
-
-                            // set as hovered
-                            insertBeforeChap.style.height = '40px';
-                            insertBeforeChap.style.backgroundColor = '#bbf0de';
-                            insertBeforeChap.style.fontSize = '20px';
-                        };
-
-                        // mouse leave
-                        insertBeforeChap.onmouseleave = () => {
-                            // if this is selected
-                            if (insertBeforeChap.getAttribute('data-selected') === 'true') {
-                                // set as selected
-                                insertBeforeChap.style.height = '40px';
-                                insertBeforeChap.style.backgroundColor = '#62c462';
-                                chapInsertBeforeText.style.fontSize = '20px';
-                            } else if (chapOptionContainer.getAttribute('data-selected') === 'true') {
-                                // set as container selected
-                                insertBeforeChap.style.height = '40px';
-                                insertBeforeChap.style.backgroundColor = '#ffc9c9';
-                                chapInsertBeforeText.style.fontSize = '20px';
-                            } else {
-                                // set as unselected
-                                insertBeforeChap.style.height = '30px';
-                                insertBeforeChap.style.backgroundColor = '#ffffff';
-                                chapInsertBeforeText.style.fontSize = '17px';
-                            }
-                        };
-                        // click
-                        insertBeforeChap.onclick = () => {
-                            let wasSelected = false;
-                            // if this was previously selected
-                            if (insertBeforeChap.getAttribute('data-selected') === 'true') {
-                                wasSelected = true;
-                            }
-
-                            // set everything else as not selected
-                            pubChapFunDiv.querySelectorAll('#chap-option').forEach(node => {
-                                node.setAttribute('data-selected', 'false');
-                            });
-                            pubChapFunDiv.querySelectorAll('#chap-insert').forEach(node => {
-                                node.setAttribute('data-selected', 'false');
-                            });
-
-                            // if it wasn't selected
-                            if (!wasSelected) {
-                                // set this as selected
-                                insertBeforeChap.setAttribute('data-selected', 'true');
-                            }
-
-                            chapOptionContainerClicked();
-
-                            console.log('here');
-
-                            callChangeEvents();
-                        };
-
-                        //insert after
-
-                        const insertAfterChap = document.createElement('span');
-                        insertAfterChap.id = 'chap-insert';
-                        insertAfterChap.setAttribute('insert', 'after');
-
-                        const chapInsertAfterIcon = document.createElement('i');
-                        chapInsertAfterIcon.className = 'fa-solid fa-arrow-down';
-
-                        const chapInsertAfterText = document.createElement('p');
-                        chapInsertAfterText.innerText = 'insert After';
-
-                        insertAfterChap.style.border = 'thin ridge';
-                        insertAfterChap.className = 'has-text-grey';
-
-                        insertAfterChap.style.display = 'flex';
-                        insertAfterChap.style.alignItems = 'center';
-                        insertAfterChap.style.gap = '10px';
-                        insertAfterChap.style.height = '30px';
-
-                        insertAfterChap.appendChild(chapInsertAfterIcon);
-                        insertAfterChap.appendChild(chapInsertAfterText);
-
-                        // hide this
-                        insertAfterChap.style.visibility = 'hidden';
-                        insertAfterChap.style.display = 'none';
-                        //insertAfterChap.hidden = true;
-
-                        const insertAfterChangeEvent = () => {
-                            //console.log('after changed');
-                            if (insertAfterChap.getAttribute('data-selected') === 'true') {
-                                //console.log('set as selected');
-                                // set as selected
-                                insertAfterChap.style.height = '40px';
-                                insertAfterChap.style.backgroundColor = '#62c462';
-                                chapInsertAfterText.style.fontSize = '20px';
-                            } else if (chapOptionContainer.getAttribute('data-selected') === 'true') {
-                                // set as container selected
-                                insertAfterChap.style.height = '40px';
-                                insertAfterChap.style.backgroundColor = '#ffc9c9';
-                                chapInsertAfterText.style.fontSize = '20px';
-                            } else {
-                                //console.log('set as unselected');
-                                // set as unselected
-                                insertAfterChap.style.height = '30px';
-                                insertAfterChap.style.backgroundColor = '#ffffff';
-                                chapInsertAfterText.style.fontSize = '17px';
-                            }
-                        };
-                        insertAfterChap.onchange = insertAfterChangeEvent;
-
-                        // mouse enter
-                        insertAfterChap.onmouseenter = () => {
-
-                            // set as hovered
-                            insertAfterChap.style.height = '40px';
-                            insertAfterChap.style.backgroundColor = '#bbf0de';
-                            insertAfterChap.style.fontSize = '20px';
-                        };
-                        // mouse leave
-                        insertAfterChap.onmouseleave = () => {
-                            // if this is selected
-                            if (insertAfterChap.getAttribute('data-selected') === 'true') {
-                                // set as selected
-                                insertAfterChap.style.height = '40px';
-                                insertAfterChap.style.backgroundColor = '#62c462';
-                                chapInsertAfterText.style.fontSize = '20px';
-                            } else if (chapOptionContainer.getAttribute('data-selected') === 'true') {
-                                // set as container selected
-                                insertAfterChap.style.height = '40px';
-                                insertAfterChap.style.backgroundColor = '#ffc9c9';
-                                chapInsertAfterText.style.fontSize = '20px';
-                            } else {
-                                // set as unselected
-                                insertAfterChap.style.height = '30px';
-                                insertAfterChap.style.backgroundColor = '#ffffff';
-                                chapInsertAfterText.style.fontSize = '17px';
-                            }
-                        };
-                        // click
-                        insertAfterChap.onclick = () => {
-                            //console.log('insert after click');
-                            let wasSelected = false;
-                            // if this was previously selected
-                            if (insertAfterChap.getAttribute('data-selected') === 'true') {
-                                wasSelected = true;
-                            }
-
-                            // set everything else as not selected
-                            pubChapFunDiv.querySelectorAll('#chap-option').forEach(node => {
-                                node.setAttribute('data-selected', 'false');
-                            });
-                            pubChapFunDiv.querySelectorAll('#chap-insert').forEach(node => {
-                                node.setAttribute('data-selected', 'false');
-                            });
-
-                            // if it wasn't selected
-                            if (!wasSelected) {
-                                // set this as selected
-                                insertAfterChap.setAttribute('data-selected', 'true');
-                            }
-
-                            chapOptionContainerClicked();
-
-                            callChangeEvents();
-                        };
-
-                        // chap option
-
-                        const chapOption = document.createElement('span');
-                        chapOption.id = 'chap-option';
-
-                        const chapInsertIcon = document.createElement('i');
-                        const chapOptionText = document.createElement('p');
-
-                        chapOption.style.border = 'thin ridge';
-                        chapOption.className = 'has-text-grey';
-
-                        chapOption.style.display = 'flex';
-                        chapOption.style.alignItems = 'center';
-                        chapOption.style.gap = '10px';
-                        chapOption.style.height = '30px';
-
-                        // chapInsertIcon.className = 'fa-solid fa-arrow-left';
-                        chapInsertIcon.className = 'fa-solid fa-repeat';
-
-                        chapOptionText.innerText = chapter;
-                        chapOptionText.style.fontSize = '17px';
-
-
-                        const chapOptionChangeEvent = () => {
-                            //console.log('option changed');
-                            // if this is selected
-                            if (chapOption.getAttribute('data-selected') === 'true') {
-                                // set as selected
-                                chapOption.style.height = '40px';
-                                chapOption.style.backgroundColor = '#62c462';
-                                chapOptionText.style.fontSize = '20px';
-                            } else if (chapOption.parentElement.getAttribute('data-selected') === 'true') {
-                                // set as container selected
-                                chapOption.style.height = '40px';
-                                chapOption.style.backgroundColor = '#ffc9c9';
-                                chapOptionText.style.fontSize = '20px';
-                            } else {
-                                // set as unselected
-                                chapOption.style.height = '30px';
-                                chapOption.style.backgroundColor = '#ffffff';
-                                chapOptionText.style.fontSize = '17px';
-                            }
-                        }
-                        chapOption.onchange = chapOptionChangeEvent;
-
-                        // mouse enter
-                        chapOption.onmouseenter = () => {
-                            //console.log('mouse enter chap option');
-
-                            // set as hovered
-                            chapOption.style.height = '40px';
-                            chapOption.style.backgroundColor = '#bbf0de';
-                            chapOptionText.style.fontSize = '20px';
-                        };
-                        // mouse leave
-                        chapOption.onmouseleave = () => {
-                            //console.log('mouse leave chap option');
-
-                            // if this isn't selected
-                            if (chapOption.getAttribute('data-selected') !== 'true') {
-
-                                // this isn't selected, but the container is selected
-                                if (chapOptionContainer.getAttribute('data-selected') === 'true') {
-                                    //console.log('container selected only');
-                                    // set as container selected
-                                    chapOption.style.height = '40px';
-                                    chapOption.style.backgroundColor = '#ffc9c9';
-                                    chapOptionText.style.fontSize = '20px';
-                                } else {
-                                    //console.log('nothing selected');
-                                    // set as unselected
-                                    chapOption.style.height = '30px';
-                                    chapOption.style.backgroundColor = '#ffffff';
-                                    chapOptionText.style.fontSize = '17px';
-                                }
-                            } else {
-                                //console.log('chap option is selected');
-                                // set as selected
-                                chapOption.style.height = '40px';
-                                chapOption.style.backgroundColor = '#62c462';
-                                chapOptionText.style.fontSize = '20px';
-                            }
-                        };
-                        // click
-                        chapOption.onclick = () => {
-                            let wasSelected = false;
-                            if (chapOption.getAttribute('data-selected') === 'true') {
-                                wasSelected = true;
-                            }
-
-                            //console.log(pubChapFunDiv);
-
-                            // set everything as not selected
-                            pubChapFunDiv.querySelectorAll('#chap-option').forEach(node => {
-                                //console.log(node);
-                                node.setAttribute('data-selected', 'false');
-                                node.style.height = '30px';
-                                node.style.backgroundColor = '#ffffff';
-                                node.style.fontSize = '17px';
-                            });
-                            // hide all chap inserts
-                            pubChapFunDiv.querySelectorAll('#chap-insert').forEach(node => {
-                                node.setAttribute('data-selected', 'false');
-                                // hide theses
-                                node.style.visibility = 'hidden';
-                                node.style.display = 'none';
-                            });
-
-                            // if it wasn't selected before
-                            if (!wasSelected) {
-                                //console.log('selected');
-
-                                // set this as selected
-                                chapOption.setAttribute('data-selected', 'true');
-
-                                // show the inserts corresponding to this chapter
-                                insertBeforeChap.style.visibility = 'visible';
-                                insertAfterChap.style.visibility = 'visible';
-                                insertBeforeChap.style.display = 'flex';
-                                insertAfterChap.style.display = 'flex';
-
-                                // set the yes button as selectable
-                                yesButton.disabled = false;
-                            } else {
-                                //console.log('deselected');
-                                //console.log(chapOption.getAttribute('data-selected'));
-                                // set the yes button as not selectable
-                                yesButton.disabled = true;
-                            }
-
-                            chapOptionContainerClicked();
-
-                            callChangeEvents();
-                        };
-
-                        const callChangeEvents = () => {
-                            insertAfterChangeEvent();
-                            insertBeforeChangeEvent();
-                            chapOptionChangeEvent();
-                        }
-
-
-                        chapOption.appendChild(chapInsertIcon);
-                        chapOption.appendChild(chapOptionText);
-
-                        chapOptionContainer.appendChild(insertBeforeChap);
-                        chapOptionContainer.appendChild(chapOption);
-                        chapOptionContainer.appendChild(insertAfterChap);
-
-                        pubChapFunDiv.appendChild(chapOptionContainer);
-                    }
-
-                    console.log(pubChapFunDiv);
-
-                    if (pubChapFunDiv.innerText === '') {
-                        const pubChapNoChapters = document.createElement('p');
-                        pubChapNoChapters.innerText = 'This is the first chapter!';
-                        pubChapFunDiv.appendChild(pubChapNoChapters);
-                    }
-
-                    const pubChapAsLatestButton = document.createElement('a');
-                    pubChapAsLatestButton.className = 'button is-link';
-                    pubChapAsLatestButton.innerText = "Publish As latest Chapter"
-                    pubChapAsLatestButton.style.marginBottom = '10px';
-                    pubChapAsLatestButton.addEventListener('click', () => {
-                        handler({ chapterNumber: publishedChapters.length, mode: 'add-last' });
-                    });
-
-                    const pubChapFunExplaination = document.createElement('p');
-                    pubChapFunExplaination.innerText = "Or, Choose where to add it: ";
-                    pubChapFunExplaination.className = 'subtitle';
-                    pubChapFunExplaination.style.marginTop = "10px";
-
-                    modalTextArea.appendChild(pubChapAsLatestButton);
-                    modalTextArea.appendChild(pubChapFunExplaination);
-                    modalTextArea.appendChild(pubChapFunDiv);
-
-                    yesButton.style.visibility = 'visible';
-                    yesButton.innerText = 'Publish';
-                    const clickYes = () => {
-                        //console.log('clicked yes');
-                        // figure out if we clicked a chapter, or if we inserted it before or after a chapter
-
-                        pubChapFunDiv.querySelectorAll('span').forEach(span => {
-                            if (span.getAttribute('data-selected') === 'true') {
-                                const chapterName = span.parentElement.querySelector('#chap-option').querySelector('p').innerText;
-                                // this is the selected span
-                                if (span.id === 'chap-option') {
-                                    // replace a chapter
-                                    handler({ chapter: chapterName, mode: 'replace' });
-                                } else if (span.id === 'chap-insert') {
-                                    // insert the chapter
-                                    if (span.getAttribute('insert') == 'before') {
-                                        handler({ chapter: chapterName, mode: 'insert-before' });
-                                    } else if (span.getAttribute('insert') == 'after') {
-                                        handler({ chapter: chapterName, mode: 'insert-after' });
-                                    }
-                                }
-                            }
-                        })
-
-                        //handler({ chapterNumber: publishedChapters.length, mode: 'addLast' });
-                    }
-                    if (modalYesListener) {
-                        yesButton.removeEventListener('click', modalYesListener);
-                    }
-                    modalYesListener = clickYes;
-                    yesButton.addEventListener('click', clickYes);
-
-                    cancelButton.innerText = 'Cancel';
-
-                    modalTitle.innerText = 'Publish Chapter';
-
-                    modal.classList.add('is-active');
-                });
-                break;
-            case "preview":
-                modalTextArea.innerHTML = '';
-
-                const previewContent = document.createElement('p');
-
-                previewContent.innerText = Chapter.content;
-
-                modalTextArea.appendChild(previewContent);
-
-                modalTextArea.value = Chapter.content;
-                modalTextArea.rows = "1";
-                yesButton.style.visibility = 'hidden';
-                cancelButton.innerText = 'Cancel';
-                modalTitle.innerText = Chapter.title;
-
-                modal.classList.add('is-active');
-                break;
-            default:
-                break;
-        }
-
-    };
-
-    const closeModal = () => {
-        const modal = document.getElementById("modal");
-        modal.classList.remove('is-active');
-    };
-
-    const closeAllModals = (e) => {
-        (document.querySelectorAll('.modal') || []).forEach((modal) => {
-            modal.classList.remove('is-active');
-        });
-    };
-
     return (
         <div>
-
-            <div id="modal" className="modal" style={{ zIndex: 1001 }}>
-                <div className="modal-background" onClick={closeAllModals}></div>
-                <div className="modal-card">
-                    <header className="modal-card-head">
-                        <p id="modal-title" className="modal-card-title"></p>
-                        <button className="delete" aria-label="close" onClick={closeModal}></button>
-                    </header>
-                    <section className="modal-card-body">
-                        <div id='modal-text-area'></div>
-                    </section>
-                    <footer className="modal-card-foot">
-                        <button id='modal-yes-button' className="button is-success" onClick={closeModal}>Yes</button>
-                        <button id='modal-cancel-button' className="button" onClick={closeModal}>Cancel</button>
-                    </footer>
-                </div>
-            </div>
-
             <div id='editor-head' style={{ position: 'sticky', top: '0px', backgroundColor: 'white', border: 'thin ridge', zIndex: 1000 }}>
                 <div style={{ height: 65, width: '100vw', display: 'flex', flexFlow: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: '30px' }}>
                     <div>
@@ -1568,36 +921,43 @@ const EditChapterWindow = (props) => {
     );
 }
 
-const loadChapterInfo = (chapter) => {
-    const chapterTitle = document.getElementById('title-div');
-    chapterTitle.innerHTML = chapter.title;
-
+const updatePublishButton = (chapter) => {
     const publishButton = document.getElementById('publish-button');
     const publishIcon = document.getElementById('publish-icon');
     const publishText = document.createTextNode('Publish');
 
     publishButton.innerHTML = '';
 
-    if (chapter.published) {
-        publishText.textContent = 'Unpublish';
+    console.log('Chapter');
+    console.log(chapter);
 
-        publishButton.classList.add('is-danger');
-        publishButton.classList.remove('is-primary');
-
-        publishIcon.className = "fa-solid fa-x";
-    } else {
+    if (!chapter.published) {
         publishText.textContent = 'Publish';
 
         publishButton.classList.remove('is-danger');
         publishButton.classList.add('is-primary');
 
         publishIcon.className = "fa-solid fa-check";
+    } else {
+        publishText.textContent = 'Unpublish';
+
+        publishButton.classList.add('is-danger');
+        publishButton.classList.remove('is-primary');
+
+        publishIcon.className = "fa-solid fa-x";
     }
     publishButton.appendChild(publishIcon);
     publishButton.appendChild(publishText);
+}
+
+const loadChapterInfo = (chapter) => {
+    const chapterTitle = document.getElementById('title-div');
+    chapterTitle.innerHTML = chapter.title;
 
     const chapterContent = document.getElementById('editable-chapter-content');
     chapterContent.innerHTML = chapter.content;
+
+    updatePublishButton(chapter);
 
     initialLoad = false;
 };

@@ -114,9 +114,8 @@ const getLoggedInAs = (req, res) => {
 
   // console.log(req.session.account._id);
 
-  Account.searchByID(req, req.session.account._id, (response) => {
+  return Account.searchByID(req, req.session.account._id, (response) => {
     if (response.error) {
-      console.log(response.error);
       return res.status(400).json(response.error);
     }
     return res.status(200).json(response);
@@ -129,129 +128,186 @@ const getToken = (req, res) => {
   return res.json({ csrfToken });
 };
 
-// add a novel to the users account
-const addNovelToLibrary = async (req, res) => {
-  console.log('add novel to library');
-  const { novelID } = req.body;
+// adds a new shelf to the users library
+// requires: shelfName
+const addShelfToLibrary = async (req, res) => {
+  console.log('add shelf to library');
 
-  // console.log('given info');
-  // console.log(req.body);
+  if (req.body.shelfName === null) {
+    return res.status(400).json({ error: 'No shelf name given' });
+  }
 
-  Account.searchByID(req, req.session.account._id, (accountResponse) => {
-    // console.log('accountResponse');
-    // console.log(accountResponse);
-
-    const { library } = accountResponse;
-    let mainShelf;
-
-    if (!accountResponse.library || accountResponse.library.length === 0) {
-      console.log('library empty');
-      mainShelf = { title: 'Main Shelf' };
-    } else {
-      // remove and get the first item in the array
-      mainShelf = accountResponse.library.shift();
+  return Account.searchByID(req, req.session.account._id, async (account) => {
+    if (account.error) {
+      return res.status(400).json(account.error);
     }
 
-    // console.log('mainShelf');
-    // console.log(mainShelf);
+    let thisShelf;
 
-    return models.Novel.searchByID(req, novelID, (novelResponse) => {
-      // console.log('novelResponse');
-      // console.log(novelResponse);
+    account.library.forEach((shelf) => {
+      if (shelf.title === req.body.shelfName) {
+        thisShelf = shelf
+      }
+    });
 
-      if (novelResponse.error) {
-        // console.log(novelResponse.error);
-        return res.status(400).json(novelResponse.error);
+    if (thisShelf) {
+      return res.status(400).json({ error: 'Shelf already exists' });
+    }
+
+    const newAccount = account;
+
+    newAccount.library.unshift({
+      title: req.body.shelfName,
+      novels: [],
+      public: false
+    });
+
+    await newAccount.save();
+
+    return res.status(200).json(newAccount);
+  });
+}
+
+// removes a shelf from the users library
+// requires: shelfName
+const removeShelfFromLibrary = async (req, res) => {
+  console.log('remove shelf from library');
+
+  if (req.body.shelfName === null) {
+    return res.status(400).json({ error: 'No shelf name given' });
+  }
+
+  return Account.searchByID(req, req.session.account._id, async (account) => {
+    if (account.error) {
+      return res.status(400).json(account.error);
+    }
+
+    const newAccount = account;
+
+    const removedShelf = newAccount.library.filter((shelf, index, arr) => {
+      if (shelf.title === req.body.shelfName) {
+        //arr.splice(index, 1);
+        return true;
+      }
+      return false;
+    });
+
+    if (removedShelf === null) {
+      return res.status(400).json({ error: `Shelf doesn't exists` });
+    }
+
+    await newAccount.save();
+
+    return res.status(200).json(newAccount);
+  });
+}
+
+// adds a novel to a shelf in the users library
+// requires: shelfName, novelID
+const addNovelToShelf = async (req, res) => {
+  console.log('add novel to shelf');
+
+  if (req.body.shelfName === null) {
+    return res.status(400).json({ error: 'No shelf name given' });
+  } else if (req.body.novelID === null) {
+    return res.status(400).json({ error: 'No novelID given' });
+  }
+
+  return Account.searchByID(req, req.session.account._id, async (account) => {
+    if (account.error) {
+      return res.status(400).json(account.error);
+    }
+
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json(thisNovel.error);
       }
 
-      // the novel id will be a unique identifier
-      mainShelf[novelID] = novelResponse;
-
-      // console.log('mainShelf');
-      // console.log(mainShelf);
-
-      library.unshift(mainShelf);
-
-      // console.log('library');
-      // console.log(library);
-
-      // console.log(req.session.account._id);
-
-      const updates = { userID: req.session.account._id, library };
-
-      return Account.updateAccountByID(req, updates, (updateResponse) => {
-        // console.log('updateResponse');
-        // console.log(updateResponse);
-        if (updateResponse.error) {
-          // console.log(updateResponse.error);
-          return res.status(400).json(updateResponse.error);
+      const newAccount = account;
+      const newLibrary = [];
+      let foundShelf = false;
+      newAccount.library.forEach((shelf) => {
+        if (shelf.title === req.body.shelfName) {
+          const updatedShelf = shelf;
+          updatedShelf.novels.unshift(req.body.novelID);
+          newLibrary.unshift(updatedShelf);
+          foundShelf = true;
+        } else {
+          newLibrary.unshift(shelf);
         }
-
-        // console.log('updateResponse');
-        // console.log(updateResponse);
-
-        return res.json({ updateResponse });
       });
+
+      if (!foundShelf) {
+        return res.status(400).json({ error: `Shelf doesn't exists` });
+      }
+
+      newAccount.library = newLibrary;
+
+      await newAccount.save();
+
+      return res.status(200).json(newAccount);
     });
   });
-};
+}
 
-const removeNovelFromLibrary = (req, res) => {
-  console.log('remove novel from library');
-  const { novelID } = req.body;
+// removes a novel from a shelf in the users library
+// requires: shelfName, novelID
+const removeNovelFromShelf = async (req, res) => {
+  console.log('remove novel from shelf');
 
-  return Account.searchByID(req, req.session.account._id, (response) => {
-    if (response.error) {
-      console.log(response.error);
-      return res.status(400).json({ error: response.error });
-    }
-    // console.log('response');
-    // console.log(response);
+  if (req.body.shelfName === null) {
+    return res.status(400).json({ error: 'No shelf name given' });
+  } else if (req.body.novelID === null) {
+    return res.status(400).json({ error: 'No novelID given' });
+  }
 
-    const { library } = response;
-    let mainShelf;
-
-    if (!response.library || response.library.length === 0) {
-      console.log('library empty');
-      mainShelf = { title: 'Main Shelf' };
-    } else {
-      // remove and get the first item in the array
-      mainShelf = response.library.shift();
+  // find this account
+  return Account.searchByID(req, req.session.account._id, async (account) => {
+    if (account.error) {
+      return res.status(400).json(account.error);
     }
 
-    console.log('mainShelf');
-    console.log(Object.keys(mainShelf));
-
-    // check if the novel is in the library
-    Object.keys(mainShelf).forEach((key) => {
-      if (key === novelID) {
-        // delete the novel from the library
-        delete mainShelf[key];
-      }
-    });
-
-    library.unshift(mainShelf);
-
-    const updates = { userID: req.session.account._id, library };
-
-    return Account.updateAccountByID(req, updates, (updateResponse) => {
-      if (updateResponse.error) {
-        console.log(updateResponse.errror);
-        return res.status(400).json({ error: updateResponse.error });
+    // find this novel
+    return Novel.searchByID(req, req.body.novelID, async (thisNovel) => {
+      if (thisNovel.error) {
+        return res.status(400).json(thisNovel.error);
       }
 
-      // console.log('updateResponse');
-      // console.log(updateResponse);
+      const newAccount = account;
+      const newLibrary = [];
+      let foundShelf = false;
+      newAccount.library.forEach((shelf) => {
+        if (shelf.title === req.body.shelfName) {
+          const updatedShelf = shelf;
+          updatedShelf.novels.filter((novel, index, arr) => {
+            if (novel === req.body.novelID) {
+              //arr.splice(index, 1);
+              return true;
+            }
+            return false;
+          });
+          newLibrary.unshift(updatedShelf);
+          foundShelf = true;
+        } else {
+          newLibrary.unshift(shelf);
+        }
+      });
 
-      if (updateResponse.error) {
-        return res.status(400).json(updateResponse.error);
+      if (!foundShelf) {
+        return res.status(400).json({ error: `Shelf doesn't exists` });
       }
 
-      return res.json({ updateResponse });
+      newAccount.library = newLibrary;
+
+      await newAccount.save();
+
+      return res.status(200).json(newAccount);
     });
   });
-};
+}
 
+// finds the library of the current sessions user
 const getMyLibrary = async (req, res) => {
   console.log('getLibrary');
 
@@ -457,8 +513,12 @@ module.exports = {
   isUsernameAvailable,
   isLoggedIn,
   getLoggedInAs,
-  addNovelToLibrary,
-  removeNovelFromLibrary,
+  // addNovelToLibrary,
+  // removeNovelFromLibrary,
+  addShelfToLibrary,
+  removeShelfFromLibrary,
+  addNovelToShelf,
+  removeNovelFromShelf,
   getMyLibrary,
   getChapterNumber,
   setChapterNumber,

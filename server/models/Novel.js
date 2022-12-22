@@ -34,7 +34,6 @@ const NovelSchema = new mongoose.Schema({
     trim: true,
     default: 'No Content Yet...',
     required: true,
-
   },
   chapters: {
     type: Map,
@@ -214,12 +213,12 @@ const updateNovelByID = async (req, updates, handler) => {
         case 'chapters':
           updateNovel.chapters = value;
           break;
-        case 'publishedChapterCount':
-          updateNovel.publishedChapterCount = value;
-          break;
-        case 'totalChapterCount':
-          updateNovel.totalChapterCount = value;
-          break;
+        // case 'publishedChapterCount':
+        //   updateNovel.publishedChapterCount = value;
+        //   break;
+        // case 'totalChapterCount':
+        //   updateNovel.totalChapterCount = value;
+        //   break;
         case 'published':
           updateNovel.published = value;
           break;
@@ -230,6 +229,8 @@ const updateNovelByID = async (req, updates, handler) => {
           break;
       }
     });
+
+    console.log(novel.chapters);
 
     if (novel.chapters && Object.keys(novel.chapters).length !== 0) {
       // update chapter counts

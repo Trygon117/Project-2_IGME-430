@@ -9,7 +9,6 @@ const profile = require('./profile.jsx');
 const readNovel = require('./readNovel.jsx');
 const viewNovel = require('./viewNovel.jsx');
 const notFound = require('./notFound.jsx');
-const helper = require('./helper.js');
 
 const init = async () => {
     const response = await fetch('/getToken');
