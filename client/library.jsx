@@ -102,21 +102,17 @@ const loadShelf = (shelf) => {
     newShelf.style.position = 'relative';
     newShelf.style.height = '400px';
 
-    let i = 0;
+    for (const i = 0; i < shelf.novels.length; i++) {
+        const novelCardContainer = document.createElement('div');
+        novelCardContainer.style.position = 'relative';
 
-    for (const novel of Object.values(shelf)) {
-        if (novel._id) {
-            const novelCardContainer = document.createElement('div');
-            novelCardContainer.style.position = 'relative';
+        ReactDOM.render(<NovelCard novel={shelf.novels[i]} n={i} />,
+            novelCardContainer
+        );
 
-            ReactDOM.render(<NovelCard novel={novel} n={i} />,
-                novelCardContainer
-            );
+        newShelf.appendChild(novelCardContainer);
 
-            newShelf.appendChild(novelCardContainer);
-
-            i++;
-        }
+        i++;
     }
 
     shelves.appendChild(newShelfTitle);

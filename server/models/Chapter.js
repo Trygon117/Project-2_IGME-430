@@ -72,13 +72,11 @@ const searchByID = async (req, chapterID, handler) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      handler({ error: 'An error has occurred' });
-      return;
+      return handler({ error: 'An error has occurred' });
     }
 
     if (doc === null) {
-      handler({ error: 'No Chapter Found' });
-      return;
+      return handler({ error: 'No Chapter Found' });
     }
 
     let chapter = doc;
@@ -89,10 +87,11 @@ const searchByID = async (req, chapterID, handler) => {
     }
 
     handler(chapter);
+    return chapter;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    handler({ error: 'An error has occurred' });
+    return handler({ error: 'An error has occurred' });
   });
 };
 
@@ -104,8 +103,7 @@ const searchByCriteria = async (req, chapterFilters, handler) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      handler({ error: 'An error has occurred' });
-      return;
+      return handler({ error: 'An error has occurred' });
     }
 
     const chapters = {};
@@ -122,7 +120,7 @@ const searchByCriteria = async (req, chapterFilters, handler) => {
     if (Object.keys(chapters).length === 0) {
       console.log('No Chapters Found');
       handler({ error: 'No Chapters Found' });
-      return;
+      return { error: 'No Chapters Found' };
     }
 
     // console.log("searchByCriteria (Novel.js)");
@@ -130,11 +128,11 @@ const searchByCriteria = async (req, chapterFilters, handler) => {
 
     console.log('found chapters');
 
-    handler(chapters);
+    return handler(chapters);
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    handler({ error: 'An error has occurred' });
+    return handler({ error: 'An error has occurred' });
   });
 };
 
@@ -146,19 +144,16 @@ const updateChapterByID = async (req, updates, handler) => {
     if (err) {
       console.log('an error');
       console.log(err);
-      handler({ error: 'An error has occurred' });
-      return;
+      return handler({ error: 'An error has occurred' });
     }
 
     if (!chapter) {
-      handler({ error: 'No Chapter Found' });
-      return;
+      return handler({ error: 'No Chapter Found' });
     }
 
     // You can only update novels that you are the author of
     if (!chapter.published && chapter.author !== sessionUsername) {
-      handler({ error: 'User does not have permission to edit the data of this novel ' });
-      return;
+      return handler({ error: 'User does not have permission to edit the data of this novel ' });
     }
 
     const updateChapter = chapter;
@@ -201,12 +196,12 @@ const updateChapterByID = async (req, updates, handler) => {
     const result = await updateChapter.save();
 
     await models.Account.updateLibrary(req, () => {
-      handler(result);
+      return handler(result);
     });
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
-    handler({ error: 'An error has occurred' });
+    return handler({ error: 'An error has occurred' });
   });
 };
 

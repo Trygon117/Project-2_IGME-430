@@ -143,7 +143,6 @@ const addShelfToLibrary = async (req, res) => {
     }
 
     let thisShelf;
-
     account.library.forEach((shelf) => {
       if (shelf.title === req.body.shelfName) {
         thisShelf = shelf
@@ -154,17 +153,23 @@ const addShelfToLibrary = async (req, res) => {
       return res.status(400).json({ error: 'Shelf already exists' });
     }
 
-    const newAccount = account;
+    const newLibrary = account.library;
 
-    newAccount.library.unshift({
+    newLibrary.unshift({
       title: req.body.shelfName,
       novels: [],
       public: false
     });
 
-    await newAccount.save();
+    const accountUpdate = { userID: req.session.account._id };
+    accountUpdate.library = newLibrary;
 
-    return res.status(200).json(newAccount);
+    Account.updateAccountByID(req, accountUpdate, (newAccount) => {
+      if (newAccount.error) {
+        return res.status(400).json({ error: newAccount.error });
+      }
+      return res.status(200).json(newAccount);
+    });
   });
 }
 
@@ -182,9 +187,8 @@ const removeShelfFromLibrary = async (req, res) => {
       return res.status(400).json(account.error);
     }
 
-    const newAccount = account;
-
-    const removedShelf = newAccount.library.filter((shelf, index, arr) => {
+    const newLibrary = account.library;
+    const removedShelf = account.library.filter((shelf, index, arr) => {
       if (shelf.title === req.body.shelfName) {
         //arr.splice(index, 1);
         return true;
@@ -196,9 +200,15 @@ const removeShelfFromLibrary = async (req, res) => {
       return res.status(400).json({ error: `Shelf doesn't exists` });
     }
 
-    await newAccount.save();
+    const accountUpdate = { userID: req.session.account._id };
+    accountUpdate.library = newLibrary;
 
-    return res.status(200).json(newAccount);
+    Account.updateAccountByID(req, accountUpdate, (newAccount) => {
+      if (newAccount.error) {
+        return res.status(400).json({ error: newAccount.error });
+      }
+      return res.status(200).json(newAccount);
+    });
   });
 }
 
@@ -224,12 +234,19 @@ const addNovelToShelf = async (req, res) => {
         return res.status(400).json(thisNovel.error);
       }
 
-      const newAccount = account;
       const newLibrary = [];
       let foundShelf = false;
-      newAccount.library.forEach((shelf) => {
+      account.library.forEach((shelf) => {
         if (shelf.title === req.body.shelfName) {
           const updatedShelf = shelf;
+
+          // make sure that the novel isnt already on the shelf
+          updatedShelf.novels.forEach(novel => {
+            if (novel._id === req.body.novelID) {
+              return res.status(400).json({ error: 'novel already on shelf' });
+            }
+          });
+
           updatedShelf.novels.unshift(req.body.novelID);
           newLibrary.unshift(updatedShelf);
           foundShelf = true;
@@ -242,11 +259,15 @@ const addNovelToShelf = async (req, res) => {
         return res.status(400).json({ error: `Shelf doesn't exists` });
       }
 
-      newAccount.library = newLibrary;
+      const accountUpdate = { userID: req.session.account._id };
+      accountUpdate.library = newLibrary;
 
-      await newAccount.save();
-
-      return res.status(200).json(newAccount);
+      return Account.updateAccountByID(req, accountUpdate, (newAccount) => {
+        if (newAccount.error) {
+          return res.status(400).json({ error: newAccount.error });
+        }
+        return res.status(200).json(newAccount);
+      });
     });
   });
 }
@@ -274,10 +295,9 @@ const removeNovelFromShelf = async (req, res) => {
         return res.status(400).json(thisNovel.error);
       }
 
-      const newAccount = account;
       const newLibrary = [];
       let foundShelf = false;
-      newAccount.library.forEach((shelf) => {
+      account.library.forEach((shelf) => {
         if (shelf.title === req.body.shelfName) {
           const updatedShelf = shelf;
           updatedShelf.novels.filter((novel, index, arr) => {
@@ -298,16 +318,21 @@ const removeNovelFromShelf = async (req, res) => {
         return res.status(400).json({ error: `Shelf doesn't exists` });
       }
 
-      newAccount.library = newLibrary;
+      const accountUpdate = { userID: req.session.account._id };
+      accountUpdate.library = newLibrary;
 
-      await newAccount.save();
-
-      return res.status(200).json(newAccount);
+      return Account.updateAccountByID(req, accountUpdate, (newAccount) => {
+        if (newAccount.error) {
+          return res.status(400).json({ error: newAccount.error });
+        }
+        return res.status(200).json(newAccount);
+      });
     });
   });
 }
 
 // finds the library of the current sessions user
+// requires: nothing
 const getMyLibrary = async (req, res) => {
   console.log('getLibrary');
 
@@ -315,9 +340,6 @@ const getMyLibrary = async (req, res) => {
   // console.log(session);
 
   return Account.searchByID(req, session._id, (response) => {
-    // console.log('response');
-    // console.log(response);
-
     if (response.error) {
       return res.status(400).json(response.error);
     }
@@ -325,6 +347,55 @@ const getMyLibrary = async (req, res) => {
     return res.status(200).json(response.library);
   });
 };
+
+// returns an array of novels that are in a specified shelf
+// requires: shelfName
+const getNovelsInShelf = async (req, res) => {
+  console.log('getNovelsInShelf');
+
+  const session = req.session.account;
+
+  if (req.body.shelfName === null) {
+    return res.status(400).json({ error: 'Missing shelfName' });
+  }
+
+  const account = await Account.searchByID(req, session._id, async (account) => {
+    return account;
+  });
+  console.log('account');
+  console.log(account);
+  if (account.error) {
+    return res.status(400).json(account.error);
+  }
+
+  console.log('account');
+  console.log(account);
+
+  let shelf;
+  account.library.forEach((thisShelf) => {
+    if (shelf.title === req.body.shelfName) {
+      shelf = thisShelf;
+    }
+  });
+
+  if (shelf === null) {
+    return res.status(400).json({ error: 'Shelf not found' });
+  }
+
+  const novels = await Promise.all(shelf.novels.map(async (novelID) => {
+    const novel = Novel.searchByID(req, novelID, (novel) => {
+      return novel;
+    });
+
+    if (novel.error) {
+      return res.status(400).json(novel.error);
+    }
+
+    return novel;
+  }));
+
+  return res.status(200).json(novels);
+}
 
 const getChapterNumber = (req, res) => {
   console.log('get chapter number');
@@ -519,6 +590,7 @@ module.exports = {
   removeShelfFromLibrary,
   addNovelToShelf,
   removeNovelFromShelf,
+  getNovelsInShelf,
   getMyLibrary,
   getChapterNumber,
   setChapterNumber,

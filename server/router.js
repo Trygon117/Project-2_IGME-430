@@ -46,6 +46,7 @@ const router = (app) => {
 
   app.post('/removeNovelFromShelf', mid.requiresLogin, mid.requiresSecure, controllers.Account.removeNovelFromShelf);
 
+  app.post('/getNovelsInShelf', mid.requiresLogin, mid.requiresSecure, controllers.Account.getNovelsInShelf)
 
   // pages
   app.get('/home', mid.requiresSecure, controllers.Pages.homePage);

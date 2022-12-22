@@ -27,13 +27,13 @@ const NovelWindow = (props) => {
 
         const libraryButton = document.getElementById('library-button');
 
-        if (libraryButton.getAttribute('data-add-remove') == 'add') {
-            await helper.sendPost('/addNovelToLibrary', { novelID: novelID, _csrf: props.csrf }, (response) => {
+        if (libraryButton.getAttribute('data-add-remove') === 'add') {
+            await helper.sendPost('/addNovelToShelf', { novelID: novelID, shelfName: 'Main Shelf', _csrf: props.csrf }, (response) => {
                 console.log(response);
                 loadButtons(novelID);
             });
         } else {
-            await helper.sendPost('/removeNovelFromLibrary', { novelID: novelID, _csrf: props.csrf }, (response) => {
+            await helper.sendPost('/removeNovelFromShelf', { novelID: novelID, shelfName: 'Main Shelf', _csrf: props.csrf }, (response) => {
                 console.log(response);
                 loadButtons(novelID);
             });
@@ -119,7 +119,10 @@ const NovelWindow = (props) => {
     );
 }
 
-const loadButtons = async (novelID) => {
+const loadButtons = async (novelID, _csrf) => {
+    helper.sendPost('/getNovelsInShelf', { shelfName: "Main Shelf", _csrf }, (response) => {
+        return response;
+    });
 
     libraryReponse = await fetch('/getMyLibrary');
     myLibrary = await libraryReponse.json();
@@ -129,11 +132,14 @@ const loadButtons = async (novelID) => {
 
     let novelInLibrary = false;
 
-    // check if the novel is in this array
-    for (const id of Object.keys(myLibrary[0])) {
-        //console.log(id);
-        if (id.toString() === novelID) {
-            novelInLibrary = true;
+    // check if the novel is on the Main Shelf
+    for (const shelf of myLibrary) {
+        if (shelf.title === 'Main Shelf') {
+            for (const id of shelf.novels) {
+                if (id.toString() === novelID) {
+                    novelInLibrary = true;
+                }
+            }
         }
     }
 
@@ -197,7 +203,7 @@ const init = async () => {
         ReactDOM.render(<NovelWindow novel={response.novel} csrf={data.csrfToken} />,
             document.getElementById('view-novel-content'));
 
-        loadButtons(novelID);
+        loadButtons(novelID, data.csrfToken);
     });
 };
 

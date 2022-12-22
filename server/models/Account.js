@@ -80,12 +80,12 @@ const searchByID = async (req, userID, handler) => {
       console.log('an error');
       console.log(err);
       handler({ error: 'An error has occurred' });
-      return;
+      return { error: 'An error has occurred' };
     }
 
     if (doc === null) {
       handler({ error: 'No Account Found' });
-      return;
+      return { error: 'No Account Found' };
     }
 
     let user = doc;
@@ -105,10 +105,12 @@ const searchByID = async (req, userID, handler) => {
     user.password = 'Nice Try!';
 
     handler(user);
+    return user;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
+    return { error: 'An error has occurred' };
   });
 };
 
@@ -121,7 +123,7 @@ const searchByCriteria = async (req, userFilters, handler) => {
       console.log('an error');
       console.log(err);
       handler({ error: 'An error has occurred' });
-      return;
+      return { error: 'An error has occurred' };
     }
 
     console.log(docs);
@@ -142,16 +144,18 @@ const searchByCriteria = async (req, userFilters, handler) => {
     if (Object.keys(users).length === 0) {
       console.log('No users Found');
       handler({ error: 'No Users Found' });
-      return;
+      return { error: 'No Users Found' };
     }
 
     console.log('found users');
 
     handler(users);
+    return users;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
+    return { error: 'An error has occurred' };
   });
 };
 
@@ -162,12 +166,12 @@ const updateAccountByID = async (req, updates, handler) => {
       console.log('an error');
       console.log(err);
       handler({ error: 'An error has occurred' });
-      return;
+      return { error: 'An error has occurred' };
     }
 
     if (!user) {
       handler({ error: 'No User Found' });
-      return;
+      return { error: 'No User Found' };
     }
 
     // console.log('user');
@@ -178,7 +182,7 @@ const updateAccountByID = async (req, updates, handler) => {
     // You can only update novels that you are the author of
     if (user._id.toString() !== req.session.account._id) {
       handler({ error: 'User does not have permission to edit the data of this Account' });
-      return;
+      return { error: 'User does not have permission to edit the data of this Account' };
     }
 
     const updatedUser = user;
@@ -211,10 +215,12 @@ const updateAccountByID = async (req, updates, handler) => {
     result.password = 'Nice Try!';
 
     handler(result);
+    return result;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
     handler({ error: 'An error has occurred' });
+    return { error: 'An error has occurred' };
   });
 };
 
@@ -227,6 +233,7 @@ const updateLibrary = async (req, handler) => {
     if (err) {
       console.log('an error');
       console.log(err);
+      handler({ error: 'An error has occurred' });
       return { error: 'An error has occurred' };
     }
 
@@ -278,10 +285,12 @@ const updateLibrary = async (req, handler) => {
 
     // console.log(updatedUser);
 
-    return handler();
+    handler(updatedUser);
+    return updatedUser;
   }).clone().catch((err) => {
     console.log('caught error');
     console.log(err);
+    handler({ error: 'An error has occurred' });
     return { error: 'An error has occurred' };
   });
 };
